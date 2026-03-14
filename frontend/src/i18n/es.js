@@ -1,20 +1,36 @@
 export const es = {
   navbar: {
-    champions: 'CAMPEONES',
-    createChampion: 'CREAR CAMPEÓN',
-    playNow: 'JUGAR',
+    champions: 'Campeones',
+    createChampion: 'Crear Campeón',
+    itemsShop: 'Items',
     swagger: 'Swagger',
+    profile: 'Perfil',
     logout: 'Cerrar sesión',
     login: 'Iniciar sesión',
+    favorites: 'Favoritos',
     help: 'Ayuda',
     userLoggedOut: 'Usuario desconectado',
+    menu: 'Menú',
   },
   searchBar: {
     placeholder: 'Buscar...',
   },
   footer: {
+    brand: "LoL API",
+    desc: "Campeones e ítems obtenidos de Data Dragon (Riot).",
+    linksTitle: "Enlaces",
     contact: "Contacto",
-    apiDocs: "Documentación API",
+    repo: "Repositorio",
+    repoTitle: "Abrir repositorio",
+    repoUrl: "https://github.com/TU_USUARIO/TU_REPO",
+    apiDocs: "Documentación (Swagger)",
+    creditsTitle: "Créditos",
+    credits:
+      "Data Dragon y recursos relacionados © Riot Games. Proyecto educativo/fan — no afiliado ni respaldado por Riot.",
+    toTop: "Volver arriba",
+    toTopTitle: "Ir arriba",
+    toTopAria: "Volver arriba",
+    copyright: "© 2026 LoL API V2 — Todos los derechos reservados."
   },
   home: {
     title: 'CAMPEONES',
@@ -22,6 +38,7 @@ export const es = {
     loading: 'Cargando…',
     errorLoad: 'No se pudieron cargar los campeones',
     noChampionsFound: 'No se encontraron campeones.',
+    tryAnotherSearch: 'Intenta con otro nombre.',
     filterAll: 'Todos',
     filterPositions: 'Posiciones',
     filterClasses: 'Roles',
@@ -51,6 +68,20 @@ export const es = {
     regionZaun: 'Zaun',
     regionRuneterra: 'Runaterra',
     regionVoid: 'El Vacío'
+  },
+  items: {
+    title: "Objetos",
+    loading: "Cargando...",
+    errorLoad: "Error al cargar objetos.",
+    searchPlaceholder: "Buscar objetos...",
+    searchAria: "Buscar objetos",
+    sortLabel: "Orden",
+    noItemsFound: "No se encontraron objetos",
+    tryAnotherSearch: "Probá otra búsqueda o filtros.",
+    tierLabel: "Tier",
+    rolesLabel: "Roles",
+    sectionsAll: "Todas",
+    all: "Todos",
   },
   profile: {
     profile: "Perfil",
@@ -133,7 +164,8 @@ export const es = {
     'Targon': 'Targon',
     'Bandle City': 'Ciudad Bandle',
     'Ixtal': 'Ixtal',
-    'Runeterra': 'Runaterra'
+    'Runeterra': 'Runaterra',
+    'The Void': 'El Vacío'
   },
   roles: {
     'Assassin': 'Asesino',

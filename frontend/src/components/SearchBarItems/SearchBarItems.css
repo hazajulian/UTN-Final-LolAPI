@@ -1,0 +1,268 @@
+.itemsSearchbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.itemsSearchbar__inputWrap {
+  position: relative;
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+
+  background: rgba(10, 12, 18, 0.28);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 16px;
+
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.itemsSearchbar__inputWrap:focus-within {
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(212, 175, 55, 0.12);
+  background: rgba(10, 12, 18, 0.32);
+}
+
+.itemsSearchbar__input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+
+  padding: 12px 44px 12px 14px;
+}
+
+.itemsSearchbar__input::placeholder {
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.itemsSearchbar__iconBtn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+
+  cursor: pointer;
+
+  transition: background 160ms ease, border-color 160ms ease,
+    transform 160ms ease, box-shadow 160ms ease;
+}
+
+.itemsSearchbar__iconBtn:hover {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: rgba(212, 175, 55, 0.38);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+  transform: translateY(-50%) translateY(-1px);
+}
+
+.itemsSearchbar__iconBtn:active {
+  transform: translateY(-50%);
+}
+
+.itemsSearchbar__icon {
+  color: rgba(212, 175, 55, 0.92);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.itemsSearchbar__clearBtn {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 28px;
+  height: 28px;
+  border-radius: 12px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+
+  transition: background 160ms ease, border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.itemsSearchbar__clearBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(212, 175, 55, 0.22);
+  transform: translateY(-50%) translateY(-1px);
+}
+
+.itemsSearchbar__sort {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.itemsSearchbar__sortLabel {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 10px 12px;
+  border-radius: 16px 0 0 16px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(12, 13, 15, 0.88) 0%,
+    rgba(10, 11, 13, 0.84) 100%
+  );
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-right: 0;
+
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+}
+
+.itemsSearchbar__sortBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 10px 14px;
+  border-radius: 0 16px 16px 0;
+
+  background: linear-gradient(
+    180deg,
+    rgba(12, 13, 15, 0.88) 0%,
+    rgba(10, 11, 13, 0.84) 100%
+  );
+  border: 1px solid rgba(212, 175, 55, 0.18);
+
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.itemsSearchbar__sortBtn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(212, 175, 55, 0.34);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.24),
+    0 0 18px rgba(212, 175, 55, 0.08);
+}
+
+.itemsSearchbar__caret {
+  color: rgba(212, 175, 55, 0.95);
+  transform: translateY(1px) rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.itemsSearchbar__sortBtn.is-open .itemsSearchbar__caret {
+  transform: translateY(1px) rotate(180deg);
+}
+
+.itemsSearchbar__sortList {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+
+  width: max-content;
+  min-width: 190px;
+
+  padding: 10px;
+  margin: 0;
+  list-style: none;
+
+  border-radius: 16px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(16, 17, 20, 0.98) 0%,
+    rgba(10, 11, 13, 0.95) 100%
+  );
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+
+  z-index: 80;
+}
+
+.itemsSearchbar__sortItem {
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 650;
+
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.itemsSearchbar__sortItem:hover {
+  background: rgba(212, 175, 55, 0.10);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 720px) {
+  .itemsSearchbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .itemsSearchbar__sort {
+    width: 100%;
+  }
+
+  .itemsSearchbar__sortLabel,
+  .itemsSearchbar__sortBtn {
+    width: 50%;
+  }
+
+  .itemsSearchbar__sortList {
+    min-width: 100%;
+  }
+}

@@ -1,0 +1,442 @@
+/* ============================================================
+   Navbar.css — Dark premium neutral (menos “azul”, más sólido)
+   - Mantiene estructura/clases EXACTAS
+   - Ajuste: padding lateral RESPONSIVO (sin variables)
+   ============================================================ */
+
+/* ===========================
+   Header fixed
+   =========================== */
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  width: 100%;
+
+  will-change: transform;
+  transform: translateZ(0);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  background: linear-gradient(
+    180deg,
+    rgba(15, 16, 18, 0.92) 0%,
+    rgba(12, 13, 15, 0.86) 100%
+  );
+
+  border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+
+  transition: transform 220ms ease;
+}
+
+.navbar.navbar--hidden {
+  transform: translateY(-110%);
+}
+
+.navbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0) 0%,
+    rgba(212, 175, 55, 0.38) 50%,
+    rgba(212, 175, 55, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* Spacer */
+.navbar__spacer {
+  height: 68px;
+}
+
+/* Inner */
+.navbar__inner {
+  /* ✅ ancho alineado con Home/Footer */
+  width: min(98%, 1480px);
+  margin: 0 auto;
+
+  min-height: 68px;
+
+  /* ✅ padding lateral global (responsivo) */
+  padding: 12px clamp(10px, 3vw, 18px);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* ===========================
+   Left / Brand
+   =========================== */
+
+.navbar__left {
+  display: flex;
+  align-items: center;
+}
+
+.navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 8px 14px;
+  border-radius: 14px;
+
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 1.02rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  color: rgba(10, 12, 18, 0.96);
+  text-decoration: none;
+
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.96) 0%,
+    rgba(196, 161, 63, 0.86) 100%
+  );
+
+  border: 1px solid rgba(212, 175, 55, 0.34);
+
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.36),
+    0 0 0 rgba(212, 175, 55, 0);
+
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.navbar__brand:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.44),
+    0 0 22px rgba(212, 175, 55, 0.18);
+}
+
+.navbar__brand:active {
+  transform: translateY(0px);
+}
+
+.navbar__brand:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.7);
+  outline-offset: 2px;
+}
+
+.navbar__brand-short {
+  display: none;
+}
+
+/* ===========================
+   Center / Links (desktop)
+   =========================== */
+
+.navbar__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.navbar__link {
+  position: relative;
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
+
+  color: rgba(255, 255, 255, 0.86);
+  text-decoration: none;
+  padding: 6px 4px;
+
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.navbar__link:hover {
+  color: rgba(212, 175, 55, 0.95);
+  transform: translateY(-1px);
+}
+
+.navbar__link::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: -4px;
+  height: 2px;
+  border-radius: 999px;
+
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0) 0%,
+    rgba(212, 175, 55, 0.82) 50%,
+    rgba(212, 175, 55, 0) 100%
+  );
+
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.navbar__link:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.navbar__link.active {
+  color: rgba(212, 175, 55, 0.98);
+}
+
+.navbar__link.active::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.navbar__sep {
+  color: rgba(212, 175, 55, 0.52);
+  font-size: 1rem;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ===========================
+   Right / Unified menu
+   =========================== */
+
+.navbar__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  position: relative;
+}
+
+.navbar__menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 14px;
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.navbar__menu-trigger:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(212, 175, 55, 0.34);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
+}
+
+.navbar__menu-trigger:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.7);
+  outline-offset: 2px;
+}
+
+.navbar__menu-label {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.navbar__menu-caret {
+  font-size: 0.95rem;
+  color: rgba(212, 175, 55, 0.92);
+  transform: translateY(1px) rotate(0deg);
+  transition: transform 180ms ease;
+}
+
+.navbar__menu-trigger.is-open .navbar__menu-caret {
+  transform: translateY(1px) rotate(180deg);
+}
+
+/* Panel */
+.navbar__menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+
+  width: min(82vw, 264px);
+  padding: 10px;
+  border-radius: 16px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(16, 17, 20, 0.96) 0%,
+    rgba(10, 11, 13, 0.92) 100%
+  );
+  border: 1px solid rgba(212, 175, 55, 0.18);
+
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.48);
+
+  transform-origin: top right;
+  animation: navbarMenuIn 180ms ease both;
+}
+
+@keyframes navbarMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+}
+
+/* Sections */
+.navbar__menu-section {
+  display: block;
+}
+
+.navbar__menu-section--primary {
+  display: none;
+}
+
+.navbar__menu-divider {
+  height: 1px;
+  margin: 8px 4px;
+  background: rgba(212, 175, 55, 0.16);
+}
+
+/* Links/buttons */
+.navbar__menu-link,
+.navbar__menu-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 10px 12px;
+  border-radius: 14px;
+
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 650;
+
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+
+  background: transparent;
+  border: 1px solid transparent;
+
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.navbar__menu-link:hover,
+.navbar__menu-btn:hover {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: rgba(212, 175, 55, 0.20);
+  transform: translateY(-1px);
+}
+
+.navbar__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-left: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  color: rgba(10, 12, 18, 0.95);
+  background: rgba(212, 175, 55, 0.92);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+}
+
+/* ===========================
+   Responsive (px)
+   =========================== */
+
+@media (max-width: 900px) {
+  .navbar__inner {
+    width: min(98%, 1320px);
+    padding: 10px clamp(10px, 3vw, 16px);
+    gap: 12px;
+  }
+
+  .navbar__spacer {
+    height: 66px;
+  }
+
+  .navbar__brand {
+    font-size: 0.98rem;
+    padding: 8px 12px;
+  }
+
+  .navbar__link {
+    font-size: 0.98rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .navbar__center {
+    display: none;
+  }
+
+  .navbar__menu-section--primary {
+    display: block;
+  }
+}
+
+@media (max-width: 364px) {
+  .navbar__brand-text {
+    display: none;
+  }
+
+  .navbar__brand-short {
+    display: inline;
+  }
+}
+
+/* ===========================
+   Reduce motion (accesibilidad)
+   =========================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar {
+    transition: none;
+  }
+
+  .navbar__brand,
+  .navbar__link,
+  .navbar__menu-trigger,
+  .navbar__menu-link,
+  .navbar__menu-btn,
+  .navbar__menu-caret {
+    transition: none;
+  }
+
+  .navbar__link::after {
+    transition: none;
+  }
+
+  .navbar__menu {
+    animation: none;
+  }
+}

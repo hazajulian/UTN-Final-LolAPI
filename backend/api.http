@@ -1,180 +1,386 @@
-# API HTTP Tests
+```http
+@baseUrl = http://localhost:3010
+@api = {{baseUrl}}/api/v1
 
-### 1. Register new user
-POST http://localhost:3010/api/v1/auth/register
+# ============================================================
+# REEMPLAZÁ ESTOS 2 TOKENS DESPUÉS DE HACER LOGIN
+# 1) Ejecutá "LOGIN User A" -> copiá token -> pegalo en @tokenA
+# 2) Ejecutá "LOGIN User B" -> copiá token -> pegalo en @tokenB
+# ============================================================
+@tokenA = 1662642cf1cb9e0eb7874c88919e3d6dd74e7bd36346a50f98a747e72adc08f1
+@tokenB = 4ad08268cbac2a84ff83d3b4f160d1c80843bdc103a9abc81a6af684eab20979
+
+# ============================================================
+# IDs de prueba (podés cambiarlos)
+# ============================================================
+@champA = champA
+@champB = champB
+@seedId = Ahri
+
+# ============================================================
+# ITEMS (Tienda) IDs de prueba (podés cambiarlos)
+# ============================================================
+# Boots (normalmente 1001)
+@itemIdA = 1001
+# Ejemplo raro para forzar 404
+@itemId404 = 999999
+
+################################################################
+# =========================
+# META / HEALTH
+# =========================
+
+### 1) META (public)
+GET {{api}}/meta
+
+
+################################################################
+# =========================
+# SWAGGER JSON (public)
+# =========================
+
+### 2) Swagger EN (public)
+GET {{baseUrl}}/swagger.json
+
+### 3) Swagger ES (public)
+GET {{baseUrl}}/swagger-es.json
+
+
+################################################################
+# =========================
+# AUTH / USERS
+# =========================
+
+### 4) REGISTER User A
+POST {{api}}/auth/register
 Content-Type: application/json
 
 {
-  "username": "usertest",
-  "email": "example@gmail.com",
-  "password": "1234"
+  "username": "userA",
+  "email": "usera@gmail.com",
+  "password": "123456"
 }
 
-# Expected: 201 Created
-
-### 2. Login user
-POST http://localhost:3010/api/v1/auth/login
+### 5) REGISTER User B
+POST {{api}}/auth/register
 Content-Type: application/json
 
 {
-  "email": "example@gmail.com",
-  "password": "1234"
+  "username": "userB",
+  "email": "userb@gmail.com",
+  "password": "123456"
 }
 
-# Expected: 200 OK (response JSON includes `token`)
-
-# Copy the returned token and paste it as <TOKEN> below
-
-### 3. Get current user profile
-GET http://localhost:3010/api/v1/auth/me
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
-
-# Expected: 200 OK (returns `{ id, username, email }`)
-
-### 4. Admin: List all users
-GET http://localhost:3010/api/v1/auth/all
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
-
-# Expected: 403 Forbidden (unless user isAdmin=true)
-
-### 5. Admin: Get user by ID
-GET http://localhost:3010/api/v1/auth/id/687d1deb016caf443cd5a04d
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
-
-# Expected: 403 Forbidden (or 200 OK if admin and valid ID, 404 Not Found if invalid)
-
-### 6. Admin: Get user by username
-GET http://localhost:3010/api/v1/auth/username/usertest
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
-
-# Expected: 403 Forbidden (or 200 OK if admin)
-
-### 7. List champions (public)
-GET http://localhost:3010/api/v1/champions?limit=20&offset=0
-
-# Expected: 200 OK (paginated list)
-
-### 8. Get champion details
-GET http://localhost:3010/api/v1/champions/ezreal
-
-# Expected: 200 OK (valid ID) or 404 Not Found (invalid)
-
-### 9. Attempt update original champion
-PATCH http://localhost:3010/api/v1/champions/ahri
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
+### 6) LOGIN User A  -> COPIÁ token y pegalo en @tokenA
+POST {{api}}/auth/login
 Content-Type: application/json
 
 {
-  "title": "Intento Malicioso"
+  "email": "usera@gmail.com",
+  "password": "123456"
 }
 
-# Expected: 403 Forbidden
-
-### 10. Attempt delete original champion
-DELETE http://localhost:3010/api/v1/champions/thresh
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
-
-# Expected: 403 Forbidden
-
-### 11. List my custom champions
-GET http://localhost:3010/api/v1/champions/user
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
-
-# Expected: 200 OK (returns array of user-owned custom champions)
-
-### 12. Create custom champion
-POST http://localhost:3010/api/v1/champions
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
+### 7) LOGIN User B  -> COPIÁ token y pegalo en @tokenB
+POST {{api}}/auth/login
 Content-Type: application/json
 
 {
-  "id": "MyUniqueChamp",
-  "name": "Mi Campeón",
-  "title": "El Legendario",
-  "region": "Runaterra",
+  "email": "userb@gmail.com",
+  "password": "123456"
+}
+
+### 8) PROFILE (User A)
+GET {{api}}/auth/me
+Authorization: Bearer {{tokenA}}
+
+### 9) UPDATE PROFILE (User A) (requiere password actual)
+PUT {{api}}/auth/profile
+Authorization: Bearer {{tokenA}}
+Content-Type: application/json
+
+{
+  "username": "userA_renamed",
+  "email": "usera_renamed@gmail.com",
+  "password": "123456"
+}
+
+### 10) CHANGE PASSWORD (User A)
+PUT {{api}}/auth/password
+Authorization: Bearer {{tokenA}}
+Content-Type: application/json
+
+{
+  "oldPassword": "123456",
+  "newPassword": "1234567",
+  "confirmPassword": "1234567"
+}
+
+### 11) LOGIN User A (con nueva pass)
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usera_renamed@gmail.com",
+  "password": "1234567"
+}
+
+### 12) LOGOUT (User A)
+POST {{api}}/auth/logout
+Authorization: Bearer {{tokenA}}
+
+
+################################################################
+# =========================
+# RESET PASSWORD FLOW
+# =========================
+# Nota: forgot-password SIEMPRE responde OK aunque no exista el mail.
+# Para reset-password necesitás el token real del email/log.
+################################################################
+
+### 13) FORGOT PASSWORD (User A)
+POST {{api}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "usera_renamed@gmail.com"
+}
+
+### 14) RESET PASSWORD (necesitás token real)
+POST {{api}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "REEMPLAZAR_TOKEN_DEL_EMAIL",
+  "newPassword": "12345678",
+  "confirmPassword": "12345678"
+}
+
+
+################################################################
+# =========================
+# CHAMPIONS (PUBLIC - SEED)
+# =========================
+
+### 15) List seed champions (OK)
+GET {{api}}/champions?page=1&limit=20
+
+### 16) List seed champions (Zod - page invalida)
+GET {{api}}/champions?page=0&limit=20
+
+### 17) List seed champions (Zod - limit fuera de rango)
+GET {{api}}/champions?page=1&limit=500
+
+### 18) Get champion by id (seed)
+GET {{api}}/champions/{{seedId}}
+
+### 19) Get champion by id (404)
+GET {{api}}/champions/NoExisteAAA
+
+
+################################################################
+# =========================
+# CUSTOM CHAMPIONS (AUTH)
+# =========================
+
+### 20) Create custom champion (User A) (ajustá si tu Zod exige más campos)
+POST {{api}}/champions
+Authorization: Bearer {{tokenA}}
+Content-Type: application/json
+
+{
+  "id": "{{champA}}",
+  "name": "Champion A",
+  "title": "Owner Champion",
+  "region": "Runeterra",
   "roles": ["Mage"],
   "positions": ["Mid"],
   "skins": [],
-  "iconUrl": "",
-  "splashUrl": "",
-  "lore": "Un campeón de prueba",
+  "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Ahri_0.jpg",
+  "splashUrl": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Ahri_0.jpg",
+  "lore": "Champion de prueba ownership",
   "allytips": [],
   "enemytips": []
 }
 
-# Expected: 201 Created (returns created champion)
+### 21) List my custom champions (User A)
+GET {{api}}/champions/user
+Authorization: Bearer {{tokenA}}
 
-### 13. Update custom champion
-PATCH http://localhost:3010/api/v1/champions/MyUniqueChamp
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
+### 22) User B intenta UPDATE champion A (debe fallar si implementaste ownership)
+PATCH {{api}}/champions/{{champA}}
+Authorization: Bearer {{tokenB}}
 Content-Type: application/json
 
 {
-  "title": "Nuevo Título Custom",
-  "roles": ["Assassin"]
+  "title": "HACKED?"
 }
 
-# Expected: 200 OK (returns updated champion)
-
-### 14. Delete custom champion
-DELETE http://localhost:3010/api/v1/champions/MyUniqueChamp
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
-
-# Expected: 200 OK (message deleted)
-
-### 15. Change password
-PUT http://localhost:3010/api/v1/auth/password
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
+### 23) User A UPDATE su champion
+PATCH {{api}}/champions/{{champA}}
+Authorization: Bearer {{tokenA}}
 Content-Type: application/json
 
 {
-  "oldPassword": "1234",
-  "newPassword": "newpass",
-  "confirmPassword": "newpass"
+  "title": "Updated by Owner"
 }
 
-# Expected: 200 OK (password updated)
+### 24) Get champion by id (custom)
+GET {{api}}/champions/{{champA}}
 
-### 16. Delete account
-DELETE http://localhost:3010/api/v1/auth
-Authorization: Bearer ffd86bb66e72c23a8cbae0d44dc3ea86ca8739be4cd183fee0a692309c7faf8b
+### 25) User B intenta DELETE champion A (debe fallar si implementaste ownership)
+DELETE {{api}}/champions/{{champA}}
+Authorization: Bearer {{tokenB}}
+
+### 26) User A DELETE su champion
+DELETE {{api}}/champions/{{champA}}
+Authorization: Bearer {{tokenA}}
+
+
+################################################################
+# =========================
+# FAVORITES (AUTH)
+# =========================
+
+### 27) Favorites (ids) (User A)
+GET {{api}}/auth/favorites
+Authorization: Bearer {{tokenA}}
+
+### 28) Add favorite SEED (User A)
+POST {{api}}/auth/favorites/{{seedId}}
+Authorization: Bearer {{tokenA}}
+
+### 29) Favorites FULL (User A) (detalles para pestaña "Favoritos")
+GET {{api}}/auth/favorites/full
+Authorization: Bearer {{tokenA}}
+
+### 30) Remove favorite (User A)
+DELETE {{api}}/auth/favorites/{{seedId}}
+Authorization: Bearer {{tokenA}}
+
+
+################################################################
+# =========================
+# CONTACT (AUTH)
+# =========================
+
+### 31) Contact (User A)
+POST {{api}}/contact
+Authorization: Bearer {{tokenA}}
 Content-Type: application/json
 
 {
-  "password": "newpass"
+  "subject": "Hola!",
+  "message": "Probando endpoint /contact desde REST Client."
 }
 
-# Expected: 200 OK (account deleted)
 
-### 17. Verify login fails after deletion
-POST http://localhost:3010/api/v1/auth/login
-Content-Type: application/json
+################################################################
+# =========================
+# ADMIN (si tenés adminMiddleware)
+# =========================
+# Nota: esto solo va a funcionar si tu usuario tiene isAdmin=true.
+# Podés setearlo manual en MongoDB para userA y luego loguear de nuevo.
+################################################################
 
-{
-  "email": "example@gmail.com",
-  "password": "newpass"
-}
+### 32) List users (admin)
+GET {{api}}/auth/all
+Authorization: Bearer {{tokenA}}
 
-# Expected: 401 Unauthorized
+### 33) Get user by username (admin)
+GET {{api}}/auth/username/userA_renamed
+Authorization: Bearer {{tokenA}}
 
-### 18. Request password reset
-POST http://localhost:3010/api/v1/auth/forgot-password
-Content-Type: application/json
 
-{
-  "email": "example@gmail.com"
-}
+################################################################
+# =========================
+# ITEMS (TIENDA) - PUBLIC
+# =========================
+# Nota:
+# - lang: en | es
+# - tags: CSV "Boots,Armor"
+# - includeHidden: true para incluir hideFromAll/inStore=false si tu API lo soporta
+################################################################
 
-# Expected: 200 OK (mensaje genérico)
+### 34) ITEMS META (public)
+GET {{api}}/items/meta
 
-### 19. Execute password reset
-POST http://localhost:3010/api/v1/auth/reset-password
-Content-Type: application/json
+### 35) ITEMS TAGS (public - EN)
+GET {{api}}/items/tags?lang=en
 
-{
-  "token": "48c0f4c2ab7fa50e9bc497e0a858d38711cd20c5",
-  "newPassword": "otraPass",
-  "confirmPassword": "otraPass"
-}
+### 36) ITEMS TAGS (public - ES)
+GET {{api}}/items/tags?lang=es
 
-# Expected: 200 OK (contraseña restablecida correctamente)
+### 37) ITEMS LIST (default) (public)
+GET {{api}}/items
+
+### 38) ITEMS LIST (page/limit) (public)
+GET {{api}}/items?page=2&limit=20
+
+### 39) ITEMS LIST (Zod - page invalida) (public)
+GET {{api}}/items?page=0&limit=20
+
+### 40) ITEMS LIST (Zod - limit fuera de rango) (public)
+GET {{api}}/items?page=1&limit=500
+
+### 41) ITEMS LIST (lang=es) (public)
+GET {{api}}/items?lang=es&page=1&limit=20
+
+### 42) ITEMS SEARCH por nombre (public)
+GET {{api}}/items?search=boots&lang=en
+
+### 43) ITEMS SEARCH (ES) (public)
+GET {{api}}/items?search=botas&lang=es
+
+### 44) ITEMS FILTER TAGS (CSV) (public)
+GET {{api}}/items?tags=Boots,Armor&lang=en
+
+### 45) ITEMS FILTER TAGS (solo Boots) + sort por gold asc (public)
+GET {{api}}/items?tags=Boots&sort=gold_asc&lang=en
+
+### 46) ITEMS FILTER GOLD RANGE + sort (public)
+GET {{api}}/items?minGold=500&maxGold=1500&sort=gold_desc&lang=en
+
+### 47) ITEMS INCLUDE HIDDEN (public)
+GET {{api}}/items?includeHidden=true&lang=en
+
+### 48) ITEMS ALL (catálogo liviano) (public)
+GET {{api}}/items/all?lang=en
+
+### 49) ITEMS ALL (catálogo liviano + includeHidden) (public)
+GET {{api}}/items/all?lang=en&includeHidden=true
+
+### 50) ITEM DETAIL (public) (ej: Boots = 1001)
+GET {{api}}/items/{{itemIdA}}?lang=en
+
+### 51) ITEM DETAIL (ES) (public)
+GET {{api}}/items/{{itemIdA}}?lang=es
+
+### 52) ITEM DETAIL (404 esperado) (public)
+GET {{api}}/items/{{itemId404}}?lang=en
+
+### 53) ITEM DETAIL (Zod - id inválido) (public)
+# idParamSchema: /^[a-zA-Z0-9_-]+$/
+GET {{api}}/items/###?lang=en
+
+### 54) ITEMS TAGS (Zod - lang inválido) (public)
+GET {{api}}/items/tags?lang=fr
+
+
+################################################################
+# =========================
+# ITEMS (TIENDA) - CHECKS DE RESPUESTA
+# =========================
+# Estos son requests "de inspección" para que veas que el payload
+# trae lo necesario: descriptionRaw / descriptionText / from / into.
+################################################################
+
+### 55) ITEM DETAIL - validar descriptionText no vacía (public)
+GET {{api}}/items/1001?lang=en
+
+### 56) ITEM DETAIL - probar un item random (probá cambiando el id)
+GET {{api}}/items/2003?lang=en
+
+### 57) ITEM DETAIL - probar un item con build path (from/into)
+# Si este id no tiene from/into, cambiá por otro que veas en la DB
+GET {{api}}/items/3006?lang=en
+```

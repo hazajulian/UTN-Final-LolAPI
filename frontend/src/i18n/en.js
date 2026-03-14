@@ -1,20 +1,36 @@
 export const en = {
   navbar: {
-    champions: 'CHAMPIONS',
-    createChampion: 'CREATE CHAMPION',
-    playNow: 'PLAY NOW',
+    champions: 'Champions',
+    createChampion: 'Create Champion',
+    itemsShop: 'Item',
     swagger: 'Swagger',
+    profile: 'Profile',
     logout: 'Logout',
     login: 'Login',
+    favorites: 'Favorites',
     help: 'Help',
     userLoggedOut: 'User logged out',
+    menu: 'Menu',
   },
   searchBar: {
     placeholder: 'Search...',
   },
   footer: {
+    brand: "LoL API",
+    desc: "Champions and items sourced from Riot’s Data Dragon.",
+    linksTitle: "Links",
     contact: "Contact",
-    apiDocs: "API Docs",
+    repo: "Repository",
+    repoTitle: "Open repository",
+    repoUrl: "https://github.com/TU_USUARIO/TU_REPO",
+    apiDocs: "Documentation (Swagger)",
+    creditsTitle: "Credits",
+    credits:
+      "Data Dragon and related assets © Riot Games. Educational/fan project — not affiliated with or endorsed by Riot.",
+    toTop: "Back to top",
+    toTopTitle: "Scroll to top",
+    toTopAria: "Scroll to top",
+    copyright: "© 2026 LoL API V2 — All rights reserved."
   },
   home: {
     title: 'CHAMPIONS',
@@ -22,6 +38,7 @@ export const en = {
     loading: 'Loading…',
     errorLoad: 'Could not load champions',
     noChampionsFound: 'No champions found.',
+    tryAnotherSearch: 'Try another name.',
     filterAll: 'All',
     filterPositions: 'Positions',
     filterClasses: 'Roles',
@@ -51,6 +68,20 @@ export const en = {
     regionZaun: 'Zaun',
     regionRuneterra: 'Runeterra',
     regionVoid: 'Void'
+  },
+  items: {
+    title: "Items",
+    loading: "Loading...",
+    errorLoad: "Failed to load items.",
+    searchPlaceholder: "Search items...",
+    searchAria: "Search items",
+    sortLabel: "Sort",
+    noItemsFound: "No items found",
+    tryAnotherSearch: "Try another search or filters.",
+    tierLabel: "Tier",
+    rolesLabel: "Roles",
+    sectionsAll: "All sections",
+    all: "All",
   },
   profile: {
     profile: "Profile",
@@ -133,7 +164,8 @@ export const en = {
     'Targon': 'Targon',
     'Bandle City': 'Bandle City',
     'Ixtal': 'Ixtal',
-    'Runeterra': 'Runeterra'
+    'Runeterra': 'Runeterra',
+    'The Void': 'The Void'
   },
   roles: {
     'Assassin': 'Assassin',

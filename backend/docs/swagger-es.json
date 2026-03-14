@@ -1,24 +1,310 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "API de Campeones v1",
+    "title": "LoL API v1",
     "version": "1.0.0",
-    "description": "API pública para consultar campeones de League of Legends (solo endpoints GET).\n\nPara acceder a rutas protegidas (crear, actualizar, eliminar campeones o endpoints de usuario), debes estar autenticado y verificado (se requiere JWT)."
+    "description": "API para campeones de League of Legends y funcionalidades de usuario.\n\nLas rutas protegidas requieren un Session Token en el header Authorization:\nAuthorization: Bearer <sessionToken>\n\nNota: este token no tiene por qué ser un JWT. Es un token de sesión generado por la API."
   },
   "servers": [
     {
-      "url": "http://localhost:3010/api/v1",
+      "url": "http://localhost:3010",
       "description": "Servidor local"
     }
   ],
   "tags": [
-    {
-      "name": "Campeones",
-      "description": "Operaciones públicas sobre campeones"
-    }
+    { "name": "Meta", "description": "Salud y metadata" },
+    { "name": "Auth", "description": "Autenticación y gestión de usuario" },
+    { "name": "Campeones", "description": "Endpoints de campeones (seed y custom)" },
+    { "name": "Items", "description": "Tienda de objetos (Data Dragon)" },
+    { "name": "Contacto", "description": "Endpoint de contacto (protegido)" }
   ],
   "components": {
+    "securitySchemes": {
+      "sessionAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "SessionToken",
+        "description": "Usar el sessionToken devuelto por /api/v1/auth/login. Ejemplo: Authorization: Bearer <sessionToken>"
+      }
+    },
     "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "error" },
+          "message": { "type": "string", "example": "Mensaje de error" },
+          "details": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "MetaResponse": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "LoL API" },
+          "status": { "type": "string", "example": "ok" },
+          "time": { "type": "string", "format": "date-time" },
+          "docs": {
+            "type": "object",
+            "properties": {
+              "en": { "type": "string", "example": "/swagger.json" },
+              "es": { "type": "string", "example": "/swagger-es.json" }
+            }
+          }
+        }
+      },
+      "ItemsModuleMetaResponse": {
+        "type": "object",
+        "properties": {
+          "module": { "type": "string", "example": "items" },
+          "ddragonVersion": { "type": "string", "example": "16.1.1" },
+          "locales": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["en_US", "es_ES"]
+          },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TagsResponse": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "type": "object",
+            "properties": {
+              "locale": { "type": "string", "example": "en_US" },
+              "total": { "type": "integer", "example": 31 }
+            }
+          },
+          "data": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["Boots", "Armor", "Damage"]
+          }
+        }
+      },
+      "ItemGold": {
+        "type": "object",
+        "properties": {
+          "base": { "type": "integer", "example": 300 },
+          "total": { "type": "integer", "example": 300 },
+          "sell": { "type": "integer", "example": 210 },
+          "purchasable": { "type": "boolean", "example": true }
+        }
+      },
+      "ItemMini": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "66965d5615bed700c126e7dc" },
+          "itemId": { "type": "string", "example": "3005" },
+          "gold": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "integer", "example": 1000 }
+            }
+          },
+          "iconUrl": { "type": "string", "format": "uri" },
+          "name": { "type": "string", "example": "Ghostcrawlers" }
+        }
+      },
+      "Item": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string", "example": "1001" },
+          "locale": { "type": "string", "example": "en_US" },
+          "name": { "type": "string", "example": "Boots" },
+          "plaintext": { "type": "string", "example": "Slightly increases Move Speed" },
+          "descriptionRaw": { "type": "string", "example": "<mainText><stats><attention>25</attention> Move Speed</stats><br><br></mainText>" },
+          "descriptionText": { "type": "string", "example": "25 Move Speed" },
+          "gold": { "$ref": "#/components/schemas/ItemGold" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["Boots"]
+          },
+          "from": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": []
+          },
+          "into": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["3005", "3047"]
+          },
+          "maps": {
+            "type": "object",
+            "additionalProperties": { "type": "boolean" },
+            "example": { "11": true, "12": true, "21": true }
+          },
+          "imageFull": { "type": "string", "example": "1001.png" },
+          "iconUrl": { "type": "string", "format": "uri" },
+          "inStore": { "type": "boolean", "example": true },
+          "hideFromAll": { "type": "boolean", "example": false },
+          "requiredChampion": { "type": "string", "example": "" },
+          "requiredAlly": { "type": "string", "example": "" },
+          "ddragonVersion": { "type": "string", "example": "16.1.1" },
+          "id": { "type": "string", "example": "66965d5615bed700c126e74e" },
+          "fromItems": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ItemMini" }
+          },
+          "intoItems": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ItemMini" }
+          }
+        }
+      },
+      "ItemListItem": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string", "example": "1001" },
+          "locale": { "type": "string", "example": "en_US" },
+          "name": { "type": "string", "example": "Boots" },
+          "plaintext": { "type": "string", "example": "Slightly increases Move Speed" },
+          "iconUrl": { "type": "string", "format": "uri" },
+          "tags": { "type": "array", "items": { "type": "string" }, "example": ["Boots"] },
+          "gold": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "integer", "example": 300 }
+            }
+          }
+        }
+      },
+      "PaginatedItems": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "integer" },
+              "page": { "type": "integer" },
+              "limit": { "type": "integer" },
+              "totalPages": { "type": "integer" }
+            }
+          },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ItemListItem" }
+          }
+        }
+      },
+      "AllItemsResponse": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "type": "object",
+            "properties": {
+              "locale": { "type": "string", "example": "en_US" },
+              "total": { "type": "integer" }
+            }
+          },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ItemListItem" }
+          }
+        }
+      },
+      "AuthUser": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "65f0c9c2d6c6f2b2a6b0a111" },
+          "username": { "type": "string", "example": "usertest" },
+          "email": { "type": "string", "example": "example@gmail.com" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/AuthUser" },
+          "token": { "type": "string", "example": "ffd86bb66e72c23a8cbae0d44dc3ea86..." }
+        }
+      },
+      "RegisterBody": {
+        "type": "object",
+        "required": ["username", "email", "password"],
+        "properties": {
+          "username": { "type": "string", "example": "usertest" },
+          "email": { "type": "string", "example": "example@gmail.com" },
+          "password": { "type": "string", "example": "1234" }
+        }
+      },
+      "LoginBody": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "example": "example@gmail.com" },
+          "password": { "type": "string", "example": "1234" }
+        }
+      },
+      "ForgotPasswordBody": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "example": "example@gmail.com" }
+        }
+      },
+      "ResetPasswordBody": {
+        "type": "object",
+        "required": ["token", "newPassword", "confirmPassword"],
+        "properties": {
+          "token": { "type": "string", "example": "48c0f4c2ab7fa50e9bc497e0a858d..." },
+          "newPassword": { "type": "string", "example": "newpass" },
+          "confirmPassword": { "type": "string", "example": "newpass" }
+        }
+      },
+      "UpdateProfileBody": {
+        "type": "object",
+        "required": ["password"],
+        "properties": {
+          "username": { "type": "string", "example": "nuevoUsername" },
+          "email": { "type": "string", "example": "nuevoemail@gmail.com" },
+          "password": { "type": "string", "example": "1234" }
+        }
+      },
+      "ChangePasswordBody": {
+        "type": "object",
+        "required": ["oldPassword", "newPassword", "confirmPassword"],
+        "properties": {
+          "oldPassword": { "type": "string", "example": "1234" },
+          "newPassword": { "type": "string", "example": "newpass" },
+          "confirmPassword": { "type": "string", "example": "newpass" }
+        }
+      },
+      "DeleteAccountBody": {
+        "type": "object",
+        "required": ["password"],
+        "properties": {
+          "password": { "type": "string", "example": "newpass" }
+        }
+      },
+
+      "Skin": {
+        "type": "object",
+        "required": ["name", "splashUrl", "loadingUrl"],
+        "properties": {
+          "name": { "type": "string", "example": "Fiddlesticks Star Nemesis" },
+          "splashUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Imagen horizontal grande (desktop)",
+            "example": "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Fiddlesticks_10.jpg"
+          },
+          "loadingUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Imagen vertical (mobile / loading)",
+            "example": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Fiddlesticks_10.jpg"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Legacy (compatibilidad). Normalmente igual a splashUrl.",
+            "example": "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Fiddlesticks_10.jpg"
+          }
+        }
+      },
+
       "ChampionSummary": {
         "type": "object",
         "required": ["id", "name", "positions", "region"],
@@ -27,6 +313,7 @@
           "name": { "type": "string" },
           "title": { "type": "string" },
           "iconUrl": { "type": "string", "format": "uri" },
+          "splashUrl": { "type": "string", "format": "uri" },
           "region": { "type": "string" },
           "positions": { "type": "array", "items": { "type": "string" } }
         }
@@ -37,9 +324,16 @@
           {
             "type": "object",
             "properties": {
+              "seed": { "type": "boolean" },
+              "owner": { "type": "string" },
+              "roles": { "type": "array", "items": { "type": "string" } },
+              "skins": { "type": "array", "items": { "$ref": "#/components/schemas/Skin" } },
               "lore": { "type": "string" },
               "allytips": { "type": "array", "items": { "type": "string" } },
-              "enemytips": { "type": "array", "items": { "type": "string" } }
+              "enemytips": { "type": "array", "items": { "type": "string" } },
+              "info": { "type": "object" },
+              "stats": { "type": "object" },
+              "abilities": { "type": "object" }
             }
           }
         ]
@@ -51,7 +345,7 @@
             "type": "object",
             "properties": {
               "total": { "type": "integer" },
-              "offset": { "type": "integer" },
+              "page": { "type": "integer" },
               "limit": { "type": "integer" },
               "totalPages": { "type": "integer" }
             }
@@ -61,92 +355,526 @@
             "items": { "$ref": "#/components/schemas/ChampionSummary" }
           }
         }
+      },
+      "CreateChampionBody": {
+        "type": "object",
+        "required": ["id", "name", "region", "positions"],
+        "properties": {
+          "id": { "type": "string", "example": "MyUniqueChamp" },
+          "name": { "type": "string", "example": "Mi Campeón" },
+          "title": { "type": "string", "example": "El Legendario" },
+          "region": { "type": "string", "example": "Runaterra" },
+          "positions": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["Top", "Jungle", "Mid", "ADC", "Support"] },
+            "example": ["Mid"]
+          },
+          "roles": { "type": "array", "items": { "type": "string" }, "example": ["Mage"] },
+          "lore": { "type": "string", "example": "Un campeón custom." },
+          "allytips": { "type": "array", "items": { "type": "string" } },
+          "enemytips": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "UpdateChampionBody": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "title": { "type": "string" },
+          "region": { "type": "string" },
+          "positions": { "type": "array", "items": { "type": "string" } },
+          "roles": { "type": "array", "items": { "type": "string" } },
+          "lore": { "type": "string" }
+        }
+      },
+      "ContactBody": {
+        "type": "object",
+        "properties": {
+          "subject": { "type": "string", "example": "Hola" },
+          "message": { "type": "string", "example": "Quiero contactarte." }
+        }
       }
     }
   },
   "paths": {
-    "/champions": {
+    "/api/v1/meta": {
       "get": {
-        "tags": ["Campeones"],
-        "summary": "Listar todos los campeones",
-        "description": "Devuelve una lista paginada de todos los campeones de League of Legends. Puedes usar 'limit' y 'offset' para paginar los resultados.",
-        "parameters": [
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 }, "description": "Cantidad de campeones a devolver (por defecto: 20)" },
-          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0 }, "description": "Cantidad de campeones a omitir (por defecto: 0)" }
-        ],
+        "tags": ["Meta"],
+        "summary": "Metadata y health check",
         "responses": {
           "200": {
-            "description": "Lista paginada de campeones",
+            "description": "Metadata API",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedChampionSummaries" },
-                "example": {
-                  "meta": {
-                    "total": 171,
-                    "offset": 0,
-                    "limit": 2,
-                    "totalPages": 86
-                  },
-                  "data": [
-                    {
-                      "id": "aatrox",
-                      "name": "Aatrox",
-                      "title": "la Hoja Oscura",
-                      "iconUrl": "https://ddragon.leagueoflegends.com/cdn/14.14.1/img/champion/Aatrox.png",
-                      "region": "Runeterra",
-                      "positions": ["Top", "Mid"]
-                    },
-                    {
-                      "id": "ahri",
-                      "name": "Ahri",
-                      "title": "la Zorra de Nueve Colas",
-                      "iconUrl": "https://ddragon.leagueoflegends.com/cdn/14.14.1/img/champion/Ahri.png",
-                      "region": "Ionia",
-                      "positions": ["Mid"]
-                    }
-                  ]
-                }
+                "schema": { "$ref": "#/components/schemas/MetaResponse" }
               }
             }
           }
         }
       }
     },
-    "/champions/{id}": {
-      "parameters": [
-        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "ID único del campeón (ej., aatrox, ahri)" }
-      ],
+    "/swagger.json": {
       "get": {
-        "tags": ["Campeones"],
-        "summary": "Obtener detalles de un campeón por ID",
-        "description": "Devuelve la información detallada para un campeón específico, incluyendo lore y consejos.",
+        "tags": ["Meta"],
+        "summary": "OpenAPI spec (EN)",
+        "responses": { "200": { "description": "OpenAPI JSON" } }
+      }
+    },
+    "/swagger-es.json": {
+      "get": {
+        "tags": ["Meta"],
+        "summary": "OpenAPI spec (ES)",
+        "responses": { "200": { "description": "OpenAPI JSON" } }
+      }
+    },
+    "/api/v1/items": {
+      "get": {
+        "tags": ["Items"],
+        "summary": "Listar items (paginado + filtros)",
+        "description": "Lista paginada de objetos. Soporta búsqueda por texto y filtros por tags.\n\nParámetros recomendados: lang, page, limit, search, tags.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en" },
+            "description": "Idioma: en | es"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1, "minimum": 1 },
+            "description": "Número de página"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 200 },
+            "description": "Cantidad por página"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Texto a buscar (por nombre/descripcion)"
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "example": "Boots,Armor" },
+            "description": "Lista de tags separadas por coma (ej: Boots,Armor)"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Detalles del campeón",
+            "description": "Lista paginada",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Champion" },
-                "example": {
-                  "id": "aatrox",
-                  "name": "Aatrox",
-                  "title": "la Hoja Oscura",
-                  "iconUrl": "https://ddragon.leagueoflegends.com/cdn/14.14.1/img/champion/Aatrox.png",
-                  "region": "Runeterra",
-                  "positions": ["Top", "Mid"],
-                  "lore": "Antiguos defensores honorables de Shurima contra el Vacío, Aatrox y sus hermanos se convirtieron en una amenaza aún mayor para Runeterra, y fueron derrotados solo por la astucia de la hechicería mortal.",
-                  "allytips": [
-                    "Puedes usar la Q de Aatrox para hostigar a los enemigos desde una distancia segura.",
-                    "Coordina tu control de masas con tu equipo para maximizar la pasiva de Aatrox."
-                  ],
-                  "enemytips": [
-                    "Evita pelear contra Aatrox cuando su pasiva esté activa.",
-                    "Intenta atraer su Q antes de comenzar la pelea."
-                  ]
-                }
+                "schema": { "$ref": "#/components/schemas/PaginatedItems" }
               }
             }
           },
-          "404": { "description": "Campeón no encontrado" }
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/all": {
+      "get": {
+        "tags": ["Items"],
+        "summary": "Listar items (completo liviano)",
+        "description": "Devuelve una lista liviana (para UI) sin paginar o con paginado interno según implementación.\n\nRecomendado para cargar catálogo y luego filtrar en frontend.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en" },
+            "description": "Idioma: en | es"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Texto a buscar"
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "example": "Boots,Armor" },
+            "description": "Lista de tags separadas por coma"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista liviana",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AllItemsResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/tags": {
+      "get": {
+        "tags": ["Items"],
+        "summary": "Listar tags disponibles (para filtros UI)",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en" },
+            "description": "Idioma: en | es"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tags",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TagsResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/meta": {
+      "get": {
+        "tags": ["Items"],
+        "summary": "Meta del módulo Items",
+        "description": "Devuelve metadata del módulo (versión de Data Dragon, locales disponibles, updatedAt).",
+        "responses": {
+          "200": {
+            "description": "Meta items",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ItemsModuleMetaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" },
+          "description": "ID del item (ej: 1001)"
+        }
+      ],
+      "get": {
+        "tags": ["Items"],
+        "summary": "Obtener detalle de item por id",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en" },
+            "description": "Idioma: en | es"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle item",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "404": {
+            "description": "No encontrado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registrar usuario",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterBody" } } }
+        },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "400": { "description": "Error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "409": { "description": "Email o username ya en uso" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginBody" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "400": { "description": "Error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Credenciales inválidas" },
+          "429": { "description": "Demasiados intentos" }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Solicitar reset de contraseña",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ForgotPasswordBody" } } }
+        },
+        "responses": {
+          "200": { "description": "OK (mensaje genérico)" },
+          "400": { "description": "Error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "429": { "description": "Demasiados intentos" }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Resetear contraseña",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResetPasswordBody" } } }
+        },
+        "responses": {
+          "200": { "description": "Contraseña restablecida correctamente" },
+          "400": { "description": "Token inválido o error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Obtener perfil actual",
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "No autorizado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout (invalidar sesión)",
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/v1/auth/profile": {
+      "put": {
+        "tags": ["Auth"],
+        "summary": "Actualizar perfil (requiere password)",
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProfileBody" } } }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "400": { "description": "Error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/v1/auth/password": {
+      "put": {
+        "tags": ["Auth"],
+        "summary": "Cambiar contraseña",
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChangePasswordBody" } } }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "400": { "description": "Error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/v1/auth": {
+      "delete": {
+        "tags": ["Auth"],
+        "summary": "Eliminar cuenta",
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeleteAccountBody" } } }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "400": { "description": "Error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/v1/champions": {
+      "get": {
+        "tags": ["Campeones"],
+        "summary": "Listar campeones seed (paginado)",
+        "description": "Devuelve una lista paginada de campeones oficiales (seed). Usar 'page' y 'limit'.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en", "enum": ["en", "es"] },
+            "description": "Idioma de textos del campeón (name/title/lore/tips/abilities). También se puede enviar por header Accept-Language. Default: en"
+          },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 }, "description": "Número de página (por defecto: 1)" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 }, "description": "Cantidad por página (por defecto: 20)" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedChampionSummaries" } } }
+          },
+          "400": { "description": "Error de validación" }
+        }
+      },
+      "post": {
+        "tags": ["Campeones"],
+        "summary": "Crear campeón custom (protegido)",
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateChampionBody" } } }
+        },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Champion" } } } },
+          "400": { "description": "Error de validación", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/v1/champions/user": {
+      "get": {
+        "tags": ["Campeones"],
+        "summary": "Listar mis campeones custom (protegido)",
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/v1/champions/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "ID del campeón (ej., aatrox, ahri, MyUniqueChamp)" }
+      ],
+      "get": {
+        "tags": ["Campeones"],
+        "summary": "Obtener detalles por ID",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en", "enum": ["en", "es"] },
+            "description": "Idioma de textos del campeón. Default: en. Alternativa: header Accept-Language"
+          }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Champion" } } } },
+          "400": { "description": "Error de validación" },
+          "404": { "description": "No encontrado" }
+        }
+      },
+      "patch": {
+        "tags": ["Campeones"],
+        "summary": "Actualizar campeón custom (protegido + ownership)",
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateChampionBody" } } }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "400": { "description": "Error de validación" },
+          "401": { "description": "No autorizado" },
+          "403": { "description": "Forbidden (seed o no owner)" },
+          "404": { "description": "No encontrado" }
+        }
+      },
+      "delete": {
+        "tags": ["Campeones"],
+        "summary": "Eliminar campeón custom (protegido + ownership)",
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" },
+          "400": { "description": "Error de validación" },
+          "401": { "description": "No autorizado" },
+          "403": { "description": "Forbidden (seed o no owner)" },
+          "404": { "description": "No encontrado" }
+        }
+      }
+    },
+    "/api/v1/contact": {
+      "post": {
+        "tags": ["Contacto"],
+        "summary": "Enviar mensaje de contacto (protegido)",
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContactBody" } } }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "No autorizado" }
         }
       }
     }

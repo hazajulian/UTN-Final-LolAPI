@@ -1,26 +1,27 @@
-// controllers/contact-controller.js
+import 'dotenv/config';
 import { sendMail } from '../utils/mail-service.js';
+import { info, error } from '../utils/logger.js';
 
 export async function contactController(req, res) {
   const { subject, message } = req.body;
-  const user = req.user; // Por el middleware de auth
+  const user = req.user;
 
-  if (!user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-  if (!subject || !message) {
-    return res.status(400).json({ message: 'Subject and message are required' });
+  const to = process.env.CONTACT_RECEIVER;
+  if (!to) {
+    return res.status(500).json({ message: 'CONTACT_RECEIVER no está configurado en el servidor' });
   }
 
   try {
     await sendMail({
-      to: process.env.CONTACT_RECEIVER,
+      to,
       subject: `[Contact Form] ${subject}`,
-      text: `Mensaje de ${user.username} <${user.email}>:\n\n${message}`,
+      text: `Mensaje de ${user.username} <${user.email}>:\n\n${message}`
     });
+
+    info('Contact mail sent', { userId: user._id, to });
     return res.json({ message: 'Message sent!' });
   } catch (err) {
-    console.error('Failed to send contact email:', err);
+    error('Failed to send contact email', { err });
     return res.status(500).json({ message: 'Error sending email' });
   }
 }
