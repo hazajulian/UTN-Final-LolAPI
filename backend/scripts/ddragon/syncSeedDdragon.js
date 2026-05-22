@@ -11,17 +11,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DDRAGON = "https://ddragon.leagueoflegends.com";
+const SPELL_KEYS = ["Q", "W", "E", "R"];
 
 /* ============================================================
-   Sanitizado mínimo para texto Data Dragon
-   - Convierte <br> -> saltos de línea
-   - Elimina tags como <font>, <i>, <span>, etc.
-   - Normaliza entidades comunes
+   Text helpers
    ============================================================ */
+
 function cleanDdragonText(input = "") {
   return String(input)
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/?[^>]+>/g, "") // remove all tags
+    .replace(/<\/?[^>]+>/g, "")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
@@ -34,35 +33,73 @@ function cleanDdragonText(input = "") {
     .trim();
 }
 
-/* ===========================
-   Fetch con retry (evita "fetch failed")
-   =========================== */
-async function fetchText(url, { retries = 3, timeoutMs = 20000 } = {}) {
-  let lastErr = null;
+function normalizeSkinName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/* ============================================================
+   Fetch helpers
+   ============================================================ */
+
+async function fetchJson(url, retries = 3) {
+  let lastError = null;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeoutMs);
-
     try {
-      const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(t);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
 
-      if (!res.ok) throw new Error(`HTTP ${res.status} - ${url}`);
-      return res.text();
+      const res = await fetch(url, {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} - ${url}`);
+      }
+
+      return res.json();
     } catch (err) {
-      clearTimeout(t);
-      lastErr = err;
-      await new Promise((r) => setTimeout(r, 400 * attempt));
+      lastError = err;
+
+      if (attempt === retries) {
+        throw lastError;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+}
+
+async function imageExists(url, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch(url, {
+        method: "HEAD",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (res.ok) return true;
+      if (res.status === 404) return false;
+    } catch {
+      if (attempt === retries) return false;
+
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
     }
   }
 
-  throw lastErr;
-}
-
-async function fetchJson(url, opts) {
-  const raw = await fetchText(url, opts);
-  return JSON.parse(raw);
+  return false;
 }
 
 async function getLatestVersion() {
@@ -70,7 +107,10 @@ async function getLatestVersion() {
   return versions[0];
 }
 
-// URLs oficiales Data Dragon
+/* ============================================================
+   Data Dragon URL builders
+   ============================================================ */
+
 function buildUrls(version, champId, fullImageName, passiveImage, spellImage, skinNum) {
   return {
     iconUrl: `${DDRAGON}/cdn/${version}/img/champion/${fullImageName}`,
@@ -86,40 +126,83 @@ function buildUrls(version, champId, fullImageName, passiveImage, spellImage, sk
   };
 }
 
+/* ============================================================
+   Local mapping: regions and positions
+   ============================================================ */
+
 async function readMapping() {
   const mappingPath = path.join(__dirname, "regions-and-positions.json");
   const raw = await fs.readFile(mappingPath, "utf-8");
   return JSON.parse(raw);
 }
 
-function pickLocaleFields(fullData) {
-  return {
-    name: fullData.name,
-    title: fullData.title,
-    lore: fullData.lore,
-    allytips: fullData.allytips || [],
-    enemytips: fullData.enemytips || [],
-    skins: (fullData.skins || []).map((s) => s.name),
-    abilities: {
-      passive: {
-        name: fullData.passive?.name || "",
-        // limpiar HTML/tagueado
-        description: cleanDdragonText(fullData.passive?.description || ""),
-      },
-      spells: (fullData.spells || []).map((sp) => ({
-        key: sp.key,
-        name: sp.name,
-        // limpiar HTML/tagueado
-        description: cleanDdragonText(sp.description || ""),
-      })),
-    },
-  };
+/* ============================================================
+   Skin filtering
+   Data Dragon can include chromas/variants inside skins.
+   This removes chromas and variants before saving.
+   ============================================================ */
+
+function isChromaSkin(skin) {
+  const name = String(skin?.name || "");
+  const normalized = normalizeSkinName(name);
+
+  if (/\([^)]+\)/.test(name)) return true;
+  if (normalized.includes("chroma")) return true;
+
+  const chromaWords = [
+    "ruby",
+    "emerald",
+    "sapphire",
+    "obsidian",
+    "pearl",
+    "rose quartz",
+    "turquoise",
+    "catseye",
+    "amethyst",
+    "citrine",
+    "aquamarine",
+    "meteorite",
+    "sandstone",
+    "rainbow",
+    "golden",
+    "granite",
+    "tanzanite",
+    "formal",
+    "emberwood",
+  ];
+
+  return chromaWords.some((word) => normalized.includes(word));
+}
+
+function getValidSkins(rawSkins = [], champName = "") {
+  const seenNames = new Set();
+
+  return rawSkins.filter((skin) => {
+    const num = Number(skin?.num);
+    const name = String(skin?.name || "").trim();
+
+    if (!Number.isFinite(num)) return false;
+    if (num < 0) return false;
+    if (!name) return false;
+    if (isChromaSkin(skin)) return false;
+
+    let nameKey = normalizeSkinName(name);
+
+    if (nameKey === "default") {
+      nameKey = normalizeSkinName(champName);
+    }
+
+    if (seenNames.has(nameKey)) return false;
+
+    seenNames.add(nameKey);
+    return true;
+  });
 }
 
 /* ============================================================
-   ->Fiddlesticks wiki remaster (solo para skins necesarias)
-   - MUY IMPORTANTE: Praetorian (skin 9) NO se overridea => DDragon
-   - Links #/media => se convierten a Special:FilePath (estable)
+   Fiddlesticks splash overrides
+   Some Fiddlesticks splash arts are overridden with wiki remaster images.
+   Loading images remain from Data Dragon.
    ============================================================ */
 
 const FIDDLE_WIKI_BY_KEY = {
@@ -136,37 +219,22 @@ const FIDDLE_WIKI_BY_KEY = {
   florafatalis: "https://wiki.leagueoflegends.com/en-us/images/Fiddlesticks_FloraFatalisSkin.jpg?b4055",
 };
 
-function normalizeSkinName(name) {
-  return String(name || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-/**
- * Devuelve la "key" del wiki según el nombre.
- * Si devuelve null => NO override (queda DDragon).
- */
 function getFiddleWikiKey(skinName, skinNum) {
   const n = normalizeSkinName(skinName);
 
-  // Default
-  if (Number(skinNum) === 0 || n === "original" || n.includes("original")) return "original";
+  if (Number(skinNum) === 0 || n === "original" || n.includes("original")) {
+    return "original";
+  }
 
-  // Praetorian = la 9
   if (n.includes("praetorian")) return null;
 
   if (n.includes("spectral")) return "spectral";
   if (n.includes("union jack")) return "unionjack";
   if (n.includes("bandito")) return "bandito";
   if (n.includes("pumpkinhead")) return "pumpkinhead";
-
   if (n.includes("fiddle me timbers") || (n.includes("timbers") && n.includes("fiddle"))) return "timbers";
   if (n.includes("surprise party")) return "surpriseparty";
   if (n.includes("dark candy")) return "darkcandy";
-
   if (n.includes("star nemesis")) return "starnemesis";
   if (n.includes("blood moon")) return "bloodmoon";
   if (n.includes("flora fatalis")) return "florafatalis";
@@ -174,19 +242,138 @@ function getFiddleWikiKey(skinName, skinNum) {
   return null;
 }
 
-/* ===========================
-   Concurrencia limitada
-   =========================== */
-async function runWithConcurrency(items, worker, concurrency = 6) {
+/* ============================================================
+   Locale fields
+   These fields are saved inside i18n.en and i18n.es.
+   ============================================================ */
+
+function pickLocaleFields(fullData) {
+  const validSkins = getValidSkins(fullData.skins || [], fullData.name);
+
+  return {
+    name: fullData.name,
+    title: fullData.title,
+    lore: fullData.lore,
+    allytips: fullData.allytips || [],
+    enemytips: fullData.enemytips || [],
+    skins: validSkins.map((skin) =>
+      skin.name?.toLowerCase?.() === "default" ? fullData.name : skin.name
+    ),
+    abilities: {
+      passive: {
+        name: fullData.passive?.name || "",
+        description: cleanDdragonText(fullData.passive?.description || ""),
+      },
+      spells: (fullData.spells || []).map((spell, index) => ({
+        key: SPELL_KEYS[index] || String(index + 1),
+        name: spell.name || "",
+        description: cleanDdragonText(spell.description || ""),
+      })),
+    },
+  };
+}
+
+/* ============================================================
+   Concurrency helper
+   ============================================================ */
+
+async function runWithConcurrency(items, worker, concurrency = 3) {
   let index = 0;
+
   const runners = Array.from({ length: concurrency }, async () => {
     while (index < items.length) {
       const currentIndex = index++;
       await worker(items[currentIndex], currentIndex);
     }
   });
+
   await Promise.all(runners);
 }
+
+/* ============================================================
+   Build skins
+   This verifies splash existence before saving each skin.
+   ============================================================ */
+
+async function buildSkins({ version, champId, champName, fullImageName, rawSkins }) {
+  const validSkins = getValidSkins(rawSkins, champName);
+  const skins = [];
+
+  if (rawSkins.length !== validSkins.length) {
+    warn(`Skins filtered for ${champId}: raw=${rawSkins.length} valid=${validSkins.length}`);
+  }
+
+  for (const skin of validSkins) {
+    const urls = buildUrls(version, champId, fullImageName, "", "", skin.num);
+
+    let splashUrl = urls.skinSplashUrl;
+    const loadingUrl = urls.skinLoadingUrl;
+
+    if (champId === "Fiddlesticks") {
+      const key = getFiddleWikiKey(skin.name, skin.num);
+      const wikiUrl = key ? FIDDLE_WIKI_BY_KEY[key] : null;
+
+      if (wikiUrl) {
+        splashUrl = wikiUrl;
+      }
+    }
+
+    const exists = await imageExists(splashUrl);
+
+    if (!exists) {
+      warn(`Skin skipped for ${champId}: "${skin.name}" num=${skin.num} image not found`);
+      continue;
+    }
+
+    skins.push({
+      name: skin.name?.toLowerCase?.() === "default" ? champName : skin.name,
+      splashUrl,
+      loadingUrl,
+      imageUrl: splashUrl,
+    });
+  }
+
+  return skins;
+}
+
+/* ============================================================
+   Build abilities
+   ============================================================ */
+
+function buildAbilities(version, champId, fullImageName, fullData) {
+  const passive = {
+    name: fullData.passive?.name || "",
+    description: cleanDdragonText(fullData.passive?.description || ""),
+    iconUrl: buildUrls(
+      version,
+      champId,
+      fullImageName,
+      fullData.passive?.image?.full || "",
+      "",
+      0
+    ).passiveIconUrl,
+  };
+
+  const spells = (fullData.spells || []).map((spell, index) => ({
+    key: SPELL_KEYS[index] || String(index + 1),
+    name: spell.name || "",
+    description: cleanDdragonText(spell.description || ""),
+    iconUrl: buildUrls(
+      version,
+      champId,
+      fullImageName,
+      "",
+      spell.image?.full || "",
+      0
+    ).spellIconUrl,
+  }));
+
+  return { passive, spells };
+}
+
+/* ============================================================
+   Main sync
+   ============================================================ */
 
 async function sync() {
   try {
@@ -198,30 +385,36 @@ async function sync() {
 
     const mapping = await readMapping();
 
-    const onlyArg = process.argv.find((a) => a.startsWith("--only="));
-    const ONLY = onlyArg ? onlyArg.split("=")[1] : null;
+    const onlyArg = process.argv.find((arg) => arg.startsWith("--only="));
+    const onlyChampion = onlyArg ? onlyArg.split("=")[1] : null;
 
-    const list = await fetchJson(`${DDRAGON}/cdn/${version}/data/en_US/champion.json`);
-    let champs = Object.values(list.data);
+    const championList = await fetchJson(`${DDRAGON}/cdn/${version}/data/en_US/champion.json`);
+    let champions = Object.values(championList.data);
 
-    if (ONLY) {
-      champs = champs.filter((c) => c.id === ONLY);
-      info(`Running ONLY for champion: ${ONLY} (${champs.length})`);
-      if (!champs.length) {
-        warn(`Champion not found in list: ${ONLY}`);
+    if (onlyChampion) {
+      champions = champions.filter((champ) => champ.id === onlyChampion);
+      info(`Running ONLY for champion: ${onlyChampion} (${champions.length})`);
+
+      if (!champions.length) {
+        warn(`Champion not found in list: ${onlyChampion}`);
         process.exit(0);
       }
     } else {
-      info(`Found ${champs.length} champions`);
+      info(`Found ${champions.length} champions`);
     }
 
     const worker = async (champ) => {
       const champId = champ.id;
 
-      const enDetail = await fetchJson(`${DDRAGON}/cdn/${version}/data/en_US/champion/${champId}.json`);
-      const enFull = enDetail.data[champId];
+      const enDetail = await fetchJson(
+        `${DDRAGON}/cdn/${version}/data/en_US/champion/${champId}.json`
+      );
 
-      const esDetail = await fetchJson(`${DDRAGON}/cdn/${version}/data/es_ES/champion/${champId}.json`);
+      const esDetail = await fetchJson(
+        `${DDRAGON}/cdn/${version}/data/es_MX/champion/${champId}.json`
+      );
+
+      const enFull = enDetail.data[champId];
       const esFull = esDetail.data[champId];
 
       const urlsBase = buildUrls(
@@ -233,49 +426,15 @@ async function sync() {
         0
       );
 
-      const skins = [];
-      for (const s of enFull.skins || []) {
-        const urls = buildUrls(version, champId, enFull.image.full, "", "", s.num);
+      const skins = await buildSkins({
+        version,
+        champId,
+        champName: enFull.name,
+        fullImageName: enFull.image.full,
+        rawSkins: enFull.skins || [],
+      });
 
-        // por defecto: DDragon
-        let splashUrl = urls.skinSplashUrl;   // horizontal
-        let loadingUrl = urls.skinLoadingUrl; // vertical
-
-        // override SOLO para Fiddlesticks, y SOLO en splashUrl (remaster)
-        // pero Praetorian queda DDragon sí o sí (key=null)
-        if (champId === "Fiddlesticks") {
-          const key = getFiddleWikiKey(s.name, s.num);
-          const wiki = key ? FIDDLE_WIKI_BY_KEY[key] : null;
-
-          if (wiki) {
-            splashUrl = wiki;      // desktop horizontal remaster
-            // loadingUrl queda DDragon vertical (mobile real)
-          }
-        }
-
-        // Compatibilidad front actual: imageUrl SIEMPRE = splashUrl (horizontal grande)
-        skins.push({
-          name: s.name,
-          splashUrl,
-          loadingUrl,
-          imageUrl: splashUrl,
-        });
-      }
-
-      const passive = {
-        name: enFull.passive?.name || "",
-        // limpiar HTML/tagueado
-        description: cleanDdragonText(enFull.passive?.description || ""),
-        iconUrl: urlsBase.passiveIconUrl,
-      };
-
-      const spells = (enFull.spells || []).map((sp) => ({
-        key: sp.key,
-        name: sp.name,
-        // limpiar HTML/tagueado
-        description: cleanDdragonText(sp.description || ""),
-        iconUrl: buildUrls(version, champId, enFull.image.full, "", sp.image?.full || "", 0).spellIconUrl,
-      }));
+      const abilities = buildAbilities(version, champId, enFull.image.full, enFull);
 
       const mapped = mapping[champId] || {};
       const region = mapped.region || "";
@@ -292,8 +451,6 @@ async function sync() {
         positions,
 
         iconUrl: urlsBase.iconUrl,
-
-        // Splash horizontal real para el campeón (como pediste)
         splashUrl: urlsBase.splashUrl,
 
         skins,
@@ -303,7 +460,7 @@ async function sync() {
         enemytips: enFull.enemytips || [],
         info: enFull.info || {},
         stats: enFull.stats || {},
-        abilities: { passive, spells },
+        abilities,
 
         i18n: {
           en: pickLocaleFields(enFull),
@@ -313,16 +470,12 @@ async function sync() {
         ddragonVersion: version,
       };
 
-      await Champion.updateOne(
-        { id: champId },
-        { $set: doc, $setOnInsert: { createdAt: new Date() } },
-        { upsert: true }
-      );
+      await Champion.replaceOne({ id: champId }, doc, { upsert: true });
 
       info(`Upserted ${champId} (skins=${skins.length})`);
     };
 
-    await runWithConcurrency(champs, worker, 6);
+    await runWithConcurrency(champions, worker, 3);
 
     info("syncSeedDdragon finished OK");
     process.exit(0);

@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// SearchBarItems.jsx — Buscador de items
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./SearchBarItems.css";
 
 import { en } from "../../i18n/en";
@@ -24,62 +26,87 @@ export function SearchBarItems({
   disabled = false,
 }) {
   const inputRef = useRef(null);
+  const sortRef = useRef(null);
 
   const [sortOpen, setSortOpen] = useState(false);
-  const sortRef = useRef(null);
 
   const dict = useMemo(() => (lang === "EN" ? en : es), [lang]);
 
   const i18n = useMemo(() => {
-    const ph =
-      placeholder ??
-      dict?.items?.searchPlaceholder ??
-      (lang === "EN" ? "Search items..." : "Buscar objetos...");
+    const items = dict?.items ?? {};
 
-    const sortLabel =
-      dict?.items?.sortLabel ?? (lang === "EN" ? "Sort" : "Orden");
+    return {
+      placeholder:
+        placeholder ??
+        items.searchPlaceholder ??
+        (lang === "EN" ? "Search items..." : "Buscar objetos..."),
 
-    const searchAria =
-      dict?.items?.searchAria ?? (lang === "EN" ? "Search items" : "Buscar objetos");
+      sortLabel:
+        items.sortLabel ??
+        (lang === "EN" ? "Sort" : "Orden"),
 
-    return { ph, sortLabel, searchAria };
+      searchAria:
+        items.searchAria ??
+        (lang === "EN" ? "Search items" : "Buscar objetos"),
+
+      clearAria:
+        items.clearSearch ??
+        (lang === "EN" ? "Clear search" : "Limpiar búsqueda"),
+
+      sortAria:
+        items.sortAria ??
+        (lang === "EN" ? "Sort items" : "Ordenar objetos"),
+    };
   }, [dict, lang, placeholder]);
 
   const currentSort = useMemo(() => {
-    const found = sortOptions.find((o) => o.value === sortValue);
-    if (found) return found;
-    return sortOptions[0] || { value: "name-asc", labelEN: "A → Z", labelES: "A → Z" };
+    const found = sortOptions.find((option) => option.value === sortValue);
+
+    return (
+      found ||
+      sortOptions[0] || {
+        value: "name-asc",
+        labelEN: "A → Z",
+        labelES: "A → Z",
+      }
+    );
   }, [sortOptions, sortValue]);
 
+  // Cierra el orden al hacer click afuera.
   useEffect(() => {
-    const onClickOutside = (e) => {
-      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    function handleClickOutside(e) {
+      if (sortRef.current && !sortRef.current.contains(e.target)) {
+        setSortOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleIconClick = () => inputRef.current?.focus();
+  function handleIconClick() {
+    inputRef.current?.focus();
+  }
 
-  const handleClear = () => {
+  function handleClear() {
     onChange?.("");
     inputRef.current?.focus();
-  };
+  }
 
-  const handleSortToggle = () => {
+  function handleSortToggle() {
     if (disabled || !onSortChange) return;
-    setSortOpen((o) => !o);
-  };
+    setSortOpen((open) => !open);
+  }
 
-  const handlePickSort = (val) => {
+  function handlePickSort(value) {
     if (!onSortChange) return;
-    onSortChange(val);
+
+    onSortChange(value);
     setSortOpen(false);
-  };
+  }
 
   return (
     <div className="itemsSearchbar">
-      {/* Input */}
       <div className="itemsSearchbar__inputWrap">
         <input
           ref={inputRef}
@@ -87,12 +114,23 @@ export function SearchBarItems({
           className="itemsSearchbar__input"
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          placeholder={i18n.ph}
+          placeholder={i18n.placeholder}
           disabled={disabled}
           autoComplete="off"
           spellCheck="false"
           aria-label={i18n.searchAria}
         />
+
+        {Boolean(value) && !disabled && (
+          <button
+            type="button"
+            className="itemsSearchbar__clearBtn"
+            onClick={handleClear}
+            aria-label={i18n.clearAria}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -105,17 +143,6 @@ export function SearchBarItems({
             ⌕
           </span>
         </button>
-
-        {Boolean(value) && !disabled && (
-          <button
-            type="button"
-            className="itemsSearchbar__clearBtn"
-            onClick={handleClear}
-            aria-label={lang === "EN" ? "Clear search" : "Limpiar búsqueda"}
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        )}
       </div>
 
       {showSort && (
@@ -129,31 +156,37 @@ export function SearchBarItems({
             disabled={disabled || !onSortChange}
             aria-haspopup="listbox"
             aria-expanded={sortOpen}
+            aria-label={i18n.sortAria}
           >
             <span className="itemsSearchbar__sortBtnText">
               {lang === "EN" ? currentSort.labelEN : currentSort.labelES}
             </span>
+
             <span className="itemsSearchbar__caret" aria-hidden="true">
               ▾
             </span>
           </button>
 
           {sortOpen && (
-            <ul className="itemsSearchbar__sortList" role="listbox" aria-label="Sort options">
+            <ul
+              className="itemsSearchbar__sortList"
+              role="listbox"
+              aria-label={i18n.sortAria}
+            >
               {sortOptions
-                .filter((opt) => opt.value !== sortValue)
-                .map((opt) => (
+                .filter((option) => option.value !== sortValue)
+                .map((option) => (
                   <li
-                    key={opt.value}
+                    key={option.value}
                     className="itemsSearchbar__sortItem"
                     role="option"
                     aria-selected={false}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handlePickSort(opt.value);
+                      handlePickSort(option.value);
                     }}
                   >
-                    {lang === "EN" ? opt.labelEN : opt.labelES}
+                    {lang === "EN" ? option.labelEN : option.labelES}
                   </li>
                 ))}
             </ul>

@@ -24,7 +24,11 @@ export async function login({ email, password }) {
 }
 
 export async function register({ username, email, password }) {
-  const { data } = await api.post("/auth/register", { username, email, password });
+  const { data } = await api.post("/auth/register", {
+    username,
+    email,
+    password,
+  });
   return data;
 }
 
@@ -33,7 +37,11 @@ export function forgotPassword({ email }) {
 }
 
 export function resetPassword({ token, newPassword, confirmPassword }) {
-  return api.post("/auth/reset-password", { token, newPassword, confirmPassword });
+  return api.post("/auth/reset-password", {
+    token,
+    newPassword,
+    confirmPassword,
+  });
 }
 
 export function sendContact({ subject, message }) {
@@ -42,12 +50,18 @@ export function sendContact({ subject, message }) {
 
 // --- ENDPOINTS DE CAMPEONES ---
 
-export async function getChampions({ page = 1, limit = 50, search, name, region, role } = {}) {
+export async function getChampions({
+  page = 1,
+  limit = 50,
+  search,
+  name,
+  region,
+  role,
+} = {}) {
   const params = { page, limit };
 
   if (search) params.search = search;
   if (name) params.name = name;
-
   if (region) params.region = region;
   if (role) params.role = role;
 
@@ -62,33 +76,34 @@ export async function getChampionById(id) {
 
 // --- ENDPOINTS DE ITEMS SHOP ---
 
-// LISTA PAGINADA + FILTROS (según schemas reales del back)
 export async function getItems({
   lang = "en",
   page = 1,
   limit = 20,
 
   search,
-  tags, // csv "Damage,Health"
-  roles, // csv "mage,tank"
+  tags,
+  roles,
 
-  tier, // "basic" | "epic" | "legendary"
-  section, // "starter" | "boots" | "consumable" | "trinket" | "basic" | "epic" | "legendary"
+  group,
+  tier,
+  section,
 
   minGold,
   maxGold,
 
-  sort, // "name" | "gold_asc" | "gold_desc"
+  sort,
   includeHidden,
   shopOnly,
+  dedupe,
 } = {}) {
   const params = { lang, page, limit };
 
   if (search) params.search = search;
-
   if (tags) params.tags = tags;
   if (roles) params.roles = roles;
 
+  if (group) params.group = group;
   if (tier) params.tier = tier;
   if (section) params.section = section;
 
@@ -98,26 +113,41 @@ export async function getItems({
   if (sort) params.sort = sort;
   if (includeHidden != null) params.includeHidden = includeHidden;
   if (shopOnly != null) params.shopOnly = shopOnly;
+  if (dedupe != null) params.dedupe = dedupe;
 
   const { data } = await api.get("/items", { params });
   return data;
 }
 
-// LISTA COMPLETA LIVIANA (según Swagger/back)
-// OJO: tu back NO acepta search/tags acá.
-export async function getItemsAll({ lang = "en", includeHidden, shopOnly } = {}) {
+export async function getItemsAll({
+  lang = "en",
+  group,
+  section,
+  includeHidden,
+  shopOnly,
+  dedupe,
+} = {}) {
   const params = { lang };
 
+  if (group) params.group = group;
+  if (section) params.section = section;
   if (includeHidden != null) params.includeHidden = includeHidden;
   if (shopOnly != null) params.shopOnly = shopOnly;
+  if (dedupe != null) params.dedupe = dedupe;
 
   const { data } = await api.get("/items/all", { params });
   return data;
 }
 
-// META FILTROS (tiers/sections/roles)
-export async function getItemsFiltersMeta({ lang = "en", includeHidden, shopOnly } = {}) {
+export async function getItemsFiltersMeta({
+  lang = "en",
+  group,
+  includeHidden,
+  shopOnly,
+} = {}) {
   const params = { lang };
+
+  if (group) params.group = group;
   if (includeHidden != null) params.includeHidden = includeHidden;
   if (shopOnly != null) params.shopOnly = shopOnly;
 
@@ -125,9 +155,9 @@ export async function getItemsFiltersMeta({ lang = "en", includeHidden, shopOnly
   return data;
 }
 
-// DETALLE (para modal)
 export async function getItemById(id, { lang = "en" } = {}) {
   const params = { lang };
+
   const { data } = await api.get(`/items/${id}`, { params });
   return data;
 }

@@ -1,340 +1,338 @@
-import "dotenv/config";
+// Sync de Items desde Riot Data Dragon + items manuales.
+// El catálogo decide qué items existen; Data Dragon o manual-items aportan los datos.
+
 import mongoose from "mongoose";
+import axios from "axios";
+import "dotenv/config";
 
 import { Item } from "../../models/mongodb/item-modeldb.js";
-import { info, warn, error } from "../../utils/logger.js";
+import { ITEM_CATALOG } from "./item-catalog.js";
+import { MANUAL_ITEMS } from "./manual-items.js";
 
-const DDRAGON = "https://ddragon.leagueoflegends.com";
+const DDRAGON_VERSION = "15.10.1";
+const LOCALES = ["en_US", "es_MX"];
 
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} - ${url}`);
-  return res.json();
-}
-
-async function getLatestVersion() {
-  const versions = await fetchJson(`${DDRAGON}/api/versions.json`);
-  return versions[0];
-}
-
-function iconUrl(version, imageFull) {
-  return `${DDRAGON}/cdn/${version}/img/item/${imageFull}`;
-}
-
-function unescapeUnicodeHtml(s = "") {
-  return String(s)
-    .replace(/\\u003c/gi, "<")
-    .replace(/\\u003e/gi, ">")
-    .replace(/\\u0026/gi, "&")
-    .replace(/\\u0027/gi, "'")
-    .replace(/\\u0022/gi, '"');
-}
-
-function htmlToText(html = "") {
-  if (!html) return "";
+function cleanHtml(html = "") {
   return String(html)
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<li>/gi, "• ")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/?[^>]+(>|$)/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-/* ===========================
-   Reglas de negocio (tiers/sections/roles)
-   =========================== */
-
-const BASIC_IDS = new Set([
-  "1052", "1038", "1026", "1018", "1029", "1042", "1004", "2022",
-  "1036", "1058", "1033", "1037", "1006", "1028", "1027",
-]);
-
-const EPIC_EXCEPTIONS = new Set(["3866"]); // Runic Compass
-const LEGENDARY_EXCEPTIONS = new Set([
-  "3877", "3867", "3869", "3870", "3876", "3871", "3041",
-]);
-
-function isVariantId(itemId) {
-  return String(itemId).startsWith("22"); // 221xxx / 222xxx
+function buildIconUrl(imageFull = "") {
+  if (!imageFull) return "";
+  return `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/item/${imageFull}`;
 }
 
-function computeTier(itemId, goldTotal, inStore, hideFromAll, tags = []) {
-  if (!inStore || hideFromAll) return "";
-  if (isVariantId(itemId)) return "";
-
-  if (BASIC_IDS.has(String(itemId))) return "basic";
-  if (LEGENDARY_EXCEPTIONS.has(String(itemId))) return "legendary";
-  if (EPIC_EXCEPTIONS.has(String(itemId))) return "epic";
-
-  if (goldTotal > 1600) return "legendary";
-  if (goldTotal >= 800 && goldTotal <= 1600) return "epic";
-
-  return "";
+function hasMap(raw, mapId) {
+  return raw?.maps?.[String(mapId)] === true;
 }
 
-function computeShopSection(itemId, goldTotal, inStore, hideFromAll, tags = [], tier = "") {
-  if (!inStore || hideFromAll) return "";
-  if (isVariantId(itemId)) return "";
-
-  const tset = new Set(tags);
-
-  if (tset.has("Trinket")) return "trinket";
-  if (tset.has("Consumable")) return "consumable";
-  if (tset.has("Boots")) return "boots";
-
-  if (tier === "basic") return "basic";
-  if (tier === "epic") return "epic";
-  if (tier === "legendary") return "legendary";
-
-  if (goldTotal > 0 && goldTotal <= 500) return "starter";
-
-  return "";
+function getGoldBase(raw) {
+  return Number(raw?.gold?.base || 0);
 }
 
-function computeRoleGroups(tags = []) {
-  const t = new Set(tags);
-  const out = new Set();
-
-  const has = (x) => t.has(x);
-
-  if (has("GoldPer") || has("Vision")) out.add("support");
-  if (has("Aura") && (has("Health") || has("Mana") || has("Armor") || has("MagicResist"))) out.add("support");
-
-  if (has("Armor") || has("MagicResist") || has("Health") || has("Tenacity") || has("HealthRegen")) out.add("tank");
-
-  if (has("SpellDamage") || has("Mana") || has("CooldownReduction") || has("MagicPenetration")) out.add("mage");
-
-  if (has("CriticalStrike") || has("AttackSpeed") || (has("OnHit") && has("Damage"))) out.add("marksman");
-
-  if (has("Stealth") || has("ArmorPenetration") || (has("NonbootsMovement") && has("Damage"))) out.add("assassin");
-
-  if (has("Damage") && (has("Health") || has("Lifesteal") || has("SpellVamp"))) out.add("fighter");
-
-  if (out.size === 0 && has("Damage")) out.add("fighter");
-
-  return Array.from(out);
+function getGoldTotal(raw) {
+  return Number(raw?.gold?.total || 0);
 }
 
-// ✅ Summoner's Rift map id = "11"
-// Si el json no trae maps, lo consideramos SR por defecto.
-// Si trae maps["11"] explícito, lo respetamos.
-function isSummonersRift(rawMaps) {
-  if (!rawMaps || typeof rawMaps !== "object") return true;
-  if (Object.prototype.hasOwnProperty.call(rawMaps, "11")) return Boolean(rawMaps["11"]);
-  return true;
+function getGoldSell(raw) {
+  return Number(raw?.gold?.sell || 0);
 }
 
-function normalizeOneItem(itemId, raw, version, locale) {
-  const gold = raw?.gold || {};
-  const imageFull = raw?.image?.full || "";
-  const descRaw = unescapeUnicodeHtml(raw?.description || "");
+function isPurchasable(raw) {
+  return raw?.gold?.purchasable !== false;
+}
 
-  const tags = Array.isArray(raw?.tags) ? raw.tags : [];
-  const goldTotal = Number(gold?.total || 0);
+function isVariantItem(itemId) {
+  return /^22\d+/.test(String(itemId));
+}
 
-  const inStore = Boolean(raw?.inStore ?? true);
-  const hideFromAll = Boolean(raw?.hideFromAll ?? false);
+function normalizeRoleTag(tag = "") {
+  return String(tag)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
 
-  const variant = isVariantId(itemId);
-  const tier = computeTier(String(itemId), goldTotal, inStore, hideFromAll, tags);
-  const shopSection = computeShopSection(String(itemId), goldTotal, inStore, hideFromAll, tags, tier);
-  const roleGroups = computeRoleGroups(tags);
+function detectRoles(tags = []) {
+  const roles = new Set();
+  const lower = tags.map(normalizeRoleTag);
 
-  const sr = isSummonersRift(raw?.maps);
+  if (lower.includes("spelldamage") || lower.includes("abilitypower") || lower.includes("mana")) {
+    roles.add("mage");
+  }
+
+  if (lower.includes("armor") || lower.includes("spellblock") || lower.includes("health")) {
+    roles.add("tank");
+  }
+
+  if (lower.includes("criticalstrike") || lower.includes("attackspeed")) {
+    roles.add("marksman");
+  }
+
+  if (lower.includes("damage") || lower.includes("lifesteal")) {
+    roles.add("fighter");
+  }
+
+  if (lower.includes("armorpenetration")) {
+    roles.add("assassin");
+  }
+
+  if (lower.includes("manaregen") || lower.includes("aura") || lower.includes("nonbootsmovement")) {
+    roles.add("support");
+  }
+
+  return [...roles];
+}
+
+async function fetchDDragonItems(locale) {
+  const url = `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/data/${locale}/item.json`;
+  const { data } = await axios.get(url);
+  return data?.data || {};
+}
+
+function getManualItem(itemId, locale) {
+  return MANUAL_ITEMS.find(
+    (item) => String(item.itemId) === String(itemId) && item.locale === locale
+  );
+}
+
+function getVisibleName(raw, catalogName) {
+  return cleanHtml(raw?.name || catalogName) || catalogName;
+}
+
+function buildDDragonDoc({ catalogItem, raw, locale }) {
+  const itemId = String(catalogItem.itemId);
 
   return {
-    itemId: String(itemId),
+    itemId,
     locale,
 
-    name: raw?.name || "",
+    catalogName: catalogItem.catalogName,
+    catalogSection: catalogItem.section,
+    catalogStatus: "approved",
+    catalogOrder: catalogItem.catalogOrder,
+
+    name: getVisibleName(raw, catalogItem.catalogName),
     plaintext: raw?.plaintext || "",
 
-    descriptionRaw: descRaw,
-    descriptionText: htmlToText(descRaw),
+    descriptionRaw: raw?.description || "",
+    descriptionText: cleanHtml(raw?.description || ""),
 
     gold: {
-      base: Number(gold?.base || 0),
-      total: goldTotal,
-      sell: Number(gold?.sell || 0),
-      purchasable: Boolean(gold?.purchasable ?? true),
+      base: getGoldBase(raw),
+      total: getGoldTotal(raw),
+      sell: getGoldSell(raw),
+      purchasable: isPurchasable(raw),
     },
 
-    tags,
-
-    from: Array.isArray(raw?.from) ? raw.from.map(String) : [],
-    into: Array.isArray(raw?.into) ? raw.into.map(String) : [],
-
+    tags: raw?.tags || [],
+    from: raw?.from || [],
+    into: raw?.into || [],
     maps: raw?.maps || {},
 
-    imageFull,
-    iconUrl: imageFull ? iconUrl(version, imageFull) : "",
+    imageFull: raw?.image?.full || "",
+    iconUrl: buildIconUrl(raw?.image?.full || ""),
 
-    inStore,
-    hideFromAll,
+    inStore: raw?.inStore !== false,
+    hideFromAll: raw?.hideFromAll === true,
+
     requiredChampion: raw?.requiredChampion || "",
     requiredAlly: raw?.requiredAlly || "",
 
-    ddragonVersion: version,
+    ddragonVersion: DDRAGON_VERSION,
 
-    isVariant: variant,
-    tier,
-    shopSection,
-    roleGroups,
+    shopGroup: catalogItem.group,
+    shopSection: catalogItem.section,
+    tier: catalogItem.tier || "",
 
-    // ✅ nuevo
-    isSummonersRift: sr,
+    roleGroups: detectRoles(raw?.tags || []),
 
-    // ✅ dedupe flags (por defecto)
+    isSummonersRift: hasMap(raw, 11),
+    isArena: catalogItem.group === "arena",
+
+    isVariant: isVariantItem(itemId),
+    isRemoved: false,
     isDuplicate: false,
     duplicateOf: "",
+
+    isVisible: true,
   };
 }
 
-async function syncLocale(version, locale) {
-  const url = `${DDRAGON}/cdn/${version}/data/${locale}/item.json`;
-  const json = await fetchJson(url);
+function buildManualDoc({ catalogItem, manualItem, locale }) {
+  const itemId = String(catalogItem.itemId);
+  const tags = manualItem.tags || [];
 
-  const data = json?.data || {};
-  const ids = Object.keys(data);
-
-  info(`Items ${locale}: found=${ids.length}`);
-
-  let created = 0;
-  let updated = 0;
-
-  for (const itemId of ids) {
-    const raw = data[itemId];
-    const doc = normalizeOneItem(itemId, raw, version, locale);
-
-    const result = await Item.updateOne(
-      { itemId: doc.itemId, locale: doc.locale },
-      { $set: doc, $setOnInsert: { createdAt: new Date() } },
-      { upsert: true }
-    );
-
-    const upserted = result?.upsertedCount || result?.upserted?.length || 0;
-    if (upserted) created += 1;
-    else updated += 1;
-  }
-
-  info(`Items ${locale}: created=${created} updated=${updated}`);
-  return { locale, created, updated, total: ids.length };
-}
-
-// ✅ Deduplicación: mismo name -> dejamos 1 canonical (SR + más caro)
-// y ocultamos el resto con hideFromAll/isDuplicate/duplicateOf
-async function dedupeByName(locale) {
-  const match = {
+  return {
+    itemId,
     locale,
-    inStore: true,
-    hideFromAll: false,
+
+    catalogName: catalogItem.catalogName,
+    catalogSection: catalogItem.section,
+    catalogStatus: "manual",
+    catalogOrder: catalogItem.catalogOrder,
+
+    name: manualItem.name || catalogItem.catalogName,
+    plaintext: manualItem.plaintext || "",
+
+    descriptionRaw: manualItem.descriptionRaw || "",
+    descriptionText: manualItem.descriptionText || cleanHtml(manualItem.descriptionRaw || ""),
+
+    gold: {
+      base: Number(manualItem.gold?.base || 0),
+      total: Number(manualItem.gold?.total || 0),
+      sell: Number(manualItem.gold?.sell || 0),
+      purchasable: manualItem.gold?.purchasable !== false,
+    },
+
+    tags,
+    from: manualItem.from || [],
+    into: manualItem.into || [],
+    maps: manualItem.maps || {},
+
+    imageFull: manualItem.imageFull || "",
+    iconUrl: manualItem.iconUrl || "",
+
+    inStore: manualItem.inStore !== false,
+    hideFromAll: manualItem.hideFromAll === true,
+
+    requiredChampion: manualItem.requiredChampion || "",
+    requiredAlly: manualItem.requiredAlly || "",
+
+    ddragonVersion: "manual",
+
+    shopGroup: catalogItem.group,
+    shopSection: catalogItem.section,
+    tier: catalogItem.tier || "",
+
+    roleGroups: manualItem.roleGroups?.length ? manualItem.roleGroups : detectRoles(tags),
+
+    isSummonersRift: manualItem.isSummonersRift ?? Boolean(manualItem.maps?.[11]),
+    isArena: catalogItem.group === "arena",
+
     isVariant: false,
-    isSummonersRift: true,
+    isRemoved: false,
+    isDuplicate: false,
+    duplicateOf: "",
+
+    isVisible: true,
   };
-
-  const groups = await Item.aggregate([
-    { $match: match },
-    { $group: { _id: "$name", ids: { $push: "$itemId" }, count: { $sum: 1 } } },
-    { $match: { count: { $gt: 1 } } },
-    { $project: { _id: 1, ids: 1, count: 1 } },
-  ]);
-
-  if (!groups.length) {
-    info(`Dedupe ${locale}: no duplicates`);
-    return { locale, duplicates: 0, hidden: 0 };
-  }
-
-  let hidden = 0;
-
-  for (const g of groups) {
-    const name = g._id;
-
-    // Traemos docs y elegimos el mejor:
-    // 1) mayor gold.total (más “actual/final” suele ser más caro)
-    // 2) desempate: itemId mayor (no ideal pero estable)
-    const docs = await Item.find({ locale, name, itemId: { $in: g.ids } })
-      .select("itemId gold.total isSummonersRift hideFromAll inStore")
-      .lean();
-
-    const sorted = [...docs].sort((a, b) => {
-      const ga = Number(a?.gold?.total || 0);
-      const gb = Number(b?.gold?.total || 0);
-      if (gb !== ga) return gb - ga;
-      return String(b.itemId).localeCompare(String(a.itemId));
-    });
-
-    const keep = sorted[0];
-    if (!keep) continue;
-
-    const keepId = String(keep.itemId);
-
-    const toHide = sorted
-      .slice(1)
-      .map((d) => String(d.itemId))
-      .filter(Boolean);
-
-    if (!toHide.length) continue;
-
-    const result = await Item.updateMany(
-      { locale, itemId: { $in: toHide } },
-      {
-        $set: {
-          hideFromAll: true,
-          isDuplicate: true,
-          duplicateOf: keepId,
-        },
-      }
-    );
-
-    hidden += result?.modifiedCount || 0;
-
-    // aseguramos que el canonical quede limpio
-    await Item.updateOne(
-      { locale, itemId: keepId },
-      { $set: { isDuplicate: false, duplicateOf: "" } }
-    );
-
-    warn(`Dedupe ${locale}: "${name}" keep=${keepId} hide=${toHide.length}`);
-  }
-
-  info(`Dedupe ${locale}: groups=${groups.length} hidden=${hidden}`);
-  return { locale, duplicates: groups.length, hidden };
 }
 
-async function sync() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    info("Connected to MongoDB (syncItems)");
+function logSectionCounts(locale, docs) {
+  const counts = docs.reduce((acc, item) => {
+    const key = `${item.shopGroup}/${item.shopSection}${item.tier ? `/${item.tier}` : ""}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
 
-    const version = await getLatestVersion();
-    info(`Using Data Dragon version: ${version}`);
+  console.log(`${locale}: section counts`);
+  console.table(
+    Object.entries(counts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, total]) => ({ key, total }))
+  );
+}
 
-    const locales = ["en_US", "es_ES"];
-    const results = [];
+function logMissing(locale, missing) {
+  if (!missing.length) {
+    console.log(`${locale}: missing items=0`);
+    return;
+  }
 
-    for (const locale of locales) {
-      try {
-        results.push(await syncLocale(version, locale));
-        // ✅ dedupe post-sync
-        results.push(await dedupeByName(locale));
-      } catch (e) {
-        warn(`Failed syncing locale=${locale}`, { err: e?.message });
-        throw e;
-      }
+  console.log(`${locale}: missing items=${missing.length}`);
+  console.table(
+    missing.map((item) => ({
+      itemId: item.itemId,
+      catalogName: item.catalogName,
+      group: item.group,
+      section: item.section,
+      tier: item.tier || "",
+    }))
+  );
+}
+
+async function syncLocale(locale, itemsData) {
+  console.log(`Syncing locale ${locale}...`);
+
+  const docs = [];
+  const missing = [];
+  let manualCount = 0;
+  let ddragonCount = 0;
+
+  for (const catalogItem of ITEM_CATALOG) {
+    const itemId = String(catalogItem.itemId);
+    const raw = itemsData[itemId];
+
+    if (raw) {
+      docs.push(buildDDragonDoc({ catalogItem, raw, locale }));
+      ddragonCount++;
+      continue;
     }
 
-    info("syncItems finished OK", { results });
+    const manualItem = getManualItem(itemId, locale);
+
+    if (manualItem) {
+      docs.push(buildManualDoc({ catalogItem, manualItem, locale }));
+      manualCount++;
+      continue;
+    }
+
+    missing.push(catalogItem);
+  }
+
+  await Item.deleteMany({ locale });
+
+  if (docs.length) {
+    await Item.insertMany(docs, { ordered: false });
+  }
+
+  const main = docs.filter((item) => item.shopGroup === "main").length;
+  const arena = docs.filter((item) => item.shopGroup === "arena").length;
+  const special = docs.filter((item) => item.shopGroup === "special").length;
+
+  console.log(`${locale}: approved visible=${docs.length}`);
+  console.log(`${locale}: ddragon=${ddragonCount} manual=${manualCount}`);
+  console.log(`${locale}: main=${main} arena=${arena} special=${special}`);
+
+  logSectionCounts(locale, docs);
+  logMissing(locale, missing);
+}
+
+async function run() {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI no está definida en el archivo .env");
+    }
+
+    console.log("Connecting MongoDB...");
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB connected");
+
+    console.log("Fetching Data Dragon locales...");
+
+    const dataByLocale = {};
+
+    for (const locale of LOCALES) {
+      dataByLocale[locale] = await fetchDDragonItems(locale);
+    }
+
+    console.log(`Catalog total=${ITEM_CATALOG.length}`);
+
+    for (const locale of LOCALES) {
+      await syncLocale(locale, dataByLocale[locale]);
+    }
+
+    console.log("Items sync completed");
     process.exit(0);
   } catch (err) {
-    error("syncItems failed", { err });
+    console.error("Sync failed:", err);
     process.exit(1);
   }
 }
 
-sync();
+run();

@@ -5,9 +5,14 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev:mysql": "node --warch startpoint/mysql.js",
+    "dev:mysql": "node --watch startpoint/mysql.js",
     "dev:mongo": "node --watch startpoint/mongo.js",
-    "dev": "node --watch config/index.js"
+    "dev": "node --watch config/index.js",
+
+    "seed:champions": "node scripts/ddragon/syncSeedDdragon.js",
+    "seed:items": "node scripts/ddragon/syncItems.js",
+    "debug:items": "node scripts/ddragon/debugItems.js",
+    "seed:all": "npm run seed:champions && npm run seed:items"
   },
   "keywords": [],
   "author": "",

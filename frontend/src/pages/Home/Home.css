@@ -365,7 +365,7 @@
   gap: 16px;
 
   grid-template-columns: repeat(auto-fit, 124px);
-  justify-content: start;
+  justify-content: center;
   align-items: start;
 
   position: relative;

@@ -1,9 +1,17 @@
+/* ============================================================
+   SearchBarItems.css — Dark premium
+   - Basado en SearchBar del Home
+   - Input + limpiar búsqueda + sort custom
+   ============================================================ */
+
 .itemsSearchbar {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
 }
+
+/* Input */
 
 .itemsSearchbar__inputWrap {
   position: relative;
@@ -17,21 +25,28 @@
   border-radius: 16px;
 
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22);
+
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
 }
 
 .itemsSearchbar__inputWrap:focus-within {
-  border-color: rgba(212, 175, 55, 0.5);
-  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.28),
-    0 0 18px rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.50);
   background: rgba(10, 12, 18, 0.32);
+
+  box-shadow:
+    0 18px 54px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(212, 175, 55, 0.12);
 }
 
 .itemsSearchbar__input {
   width: 100%;
+
   border: 0;
   outline: 0;
 
@@ -43,45 +58,62 @@
   font-size: 1rem;
   letter-spacing: 0.02em;
 
-  padding: 12px 44px 12px 14px;
+  padding: 12px 84px 12px 14px;
 }
 
 .itemsSearchbar__input::placeholder {
   color: rgba(255, 255, 255, 0.52);
 }
 
-.itemsSearchbar__iconBtn {
+/* Botones internos */
+
+.itemsSearchbar__iconBtn,
+.itemsSearchbar__clearBtn {
   position: absolute;
-  right: 10px;
   top: 50%;
   transform: translateY(-50%);
-
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  background: rgba(255, 255, 255, 0.04);
-
   cursor: pointer;
 
-  transition: background 160ms ease, border-color 160ms ease,
-    transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.itemsSearchbar__iconBtn {
+  right: 10px;
+
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .itemsSearchbar__iconBtn:hover {
   background: rgba(212, 175, 55, 0.08);
   border-color: rgba(212, 175, 55, 0.38);
+
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
   transform: translateY(-50%) translateY(-1px);
 }
 
 .itemsSearchbar__iconBtn:active {
   transform: translateY(-50%);
+}
+
+.itemsSearchbar__iconBtn:focus-visible,
+.itemsSearchbar__clearBtn:focus-visible,
+.itemsSearchbar__sortBtn:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.70);
+  outline-offset: 2px;
 }
 
 .itemsSearchbar__icon {
@@ -91,27 +123,16 @@
 }
 
 .itemsSearchbar__clearBtn {
-  position: absolute;
   right: 48px;
-  top: 50%;
-  transform: translateY(-50%);
 
   width: 28px;
   height: 28px;
   border-radius: 12px;
 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
 
   color: rgba(255, 255, 255, 0.75);
-  cursor: pointer;
-
-  transition: background 160ms ease, border-color 160ms ease,
-    transform 160ms ease;
 }
 
 .itemsSearchbar__clearBtn:hover {
@@ -120,10 +141,28 @@
   transform: translateY(-50%) translateY(-1px);
 }
 
+.itemsSearchbar__clearBtn:active {
+  transform: translateY(-50%);
+}
+
+.itemsSearchbar__input:disabled,
+.itemsSearchbar__iconBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Sort */
+
 .itemsSearchbar__sort {
   position: relative;
+
   display: flex;
   align-items: stretch;
+
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .itemsSearchbar__sortLabel {
@@ -138,6 +177,7 @@
     rgba(12, 13, 15, 0.88) 0%,
     rgba(10, 11, 13, 0.84) 100%
   );
+
   border: 1px solid rgba(212, 175, 55, 0.18);
   border-right: 0;
 
@@ -149,8 +189,8 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-
   font-size: 0.92rem;
+
   color: rgba(255, 255, 255, 0.82);
   white-space: nowrap;
 }
@@ -169,6 +209,7 @@
     rgba(12, 13, 15, 0.88) 0%,
     rgba(10, 11, 13, 0.84) 100%
   );
+
   border: 1px solid rgba(212, 175, 55, 0.18);
 
   color: rgba(255, 255, 255, 0.92);
@@ -181,15 +222,36 @@
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
-    border-color 160ms ease;
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .itemsSearchbar__sortBtn:hover {
   transform: translateY(-1px);
   border-color: rgba(212, 175, 55, 0.34);
+
   box-shadow:
     0 18px 44px rgba(0, 0, 0, 0.24),
     0 0 18px rgba(212, 175, 55, 0.08);
+}
+
+.itemsSearchbar__sortBtn:active {
+  transform: translateY(0);
+}
+
+.itemsSearchbar__sortBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.itemsSearchbar__sortBtnText {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.92rem;
 }
 
 .itemsSearchbar__caret {
@@ -201,6 +263,8 @@
 .itemsSearchbar__sortBtn.is-open .itemsSearchbar__caret {
   transform: translateY(1px) rotate(180deg);
 }
+
+/* Dropdown sort */
 
 .itemsSearchbar__sortList {
   position: absolute;
@@ -221,10 +285,42 @@
     rgba(16, 17, 20, 0.98) 0%,
     rgba(10, 11, 13, 0.95) 100%
   );
+
   border: 1px solid rgba(212, 175, 55, 0.18);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
 
-  z-index: 80;
+  transform-origin: top right;
+  animation: itemsSbDropIn 170ms ease both;
+
+  z-index: 120;
+}
+
+.itemsSearchbar__sortList::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 22px;
+
+  width: 14px;
+  height: 14px;
+
+  transform: rotate(45deg);
+
+  background: rgba(14, 15, 18, 0.96);
+  border-left: 1px solid rgba(212, 175, 55, 0.16);
+  border-top: 1px solid rgba(212, 175, 55, 0.16);
+}
+
+@keyframes itemsSbDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .itemsSearchbar__sortItem {
@@ -238,13 +334,17 @@
   color: rgba(255, 255, 255, 0.92);
   cursor: pointer;
 
-  transition: background 150ms ease, transform 150ms ease;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
 }
 
 .itemsSearchbar__sortItem:hover {
   background: rgba(212, 175, 55, 0.10);
   transform: translateY(-1px);
 }
+
+/* Responsive */
 
 @media (max-width: 720px) {
   .itemsSearchbar {
@@ -263,6 +363,34 @@
   }
 
   .itemsSearchbar__sortList {
+    right: 0;
     min-width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .itemsSearchbar__sortLabel {
+    width: 46%;
+  }
+
+  .itemsSearchbar__sortBtn {
+    width: 54%;
+  }
+}
+
+/* Reduce motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .itemsSearchbar__inputWrap,
+  .itemsSearchbar__iconBtn,
+  .itemsSearchbar__clearBtn,
+  .itemsSearchbar__sortBtn,
+  .itemsSearchbar__sortItem,
+  .itemsSearchbar__caret {
+    transition: none;
+  }
+
+  .itemsSearchbar__sortList {
+    animation: none;
   }
 }

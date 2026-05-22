@@ -1,103 +1,190 @@
-// Controladores para Items (Tienda)
+// Controladores de Items.
+// La seed ya deja los items limpios; el controller solo filtra, ordena y expone datos.
+
 import { Item } from "../models/mongodb/item-modeldb.js";
 import { info, warn, error } from "../utils/logger.js";
 
-function toLocale(lang) {
-  return lang === "es" ? "es_ES" : "en_US";
+function toLocale(lang = "en") {
+  return lang === "es" ? "es_MX" : "en_US";
 }
 
-function parseCsv(val) {
-  if (!val) return [];
-  if (Array.isArray(val)) return val.flatMap(parseCsv);
-  return String(val)
+function parseCsv(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap(parseCsv);
+  }
+
+  return String(value)
     .split(",")
-    .map((s) => s.trim())
+    .map((item) => item.trim())
     .filter(Boolean);
 }
 
-// filtro “shop limpio”
-function applyShopOnly(filter, shopOnly) {
-  if (!shopOnly) return;
+function parseBoolean(value, fallback = false) {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "boolean") return value;
 
-  // saca 221xxx/222xxx
-  filter.isVariant = false;
-
-  // visibles/comprables
-  filter.inStore = true;
-  filter.hideFromAll = false;
-
-  // ✅ solo SR
-  filter.isSummonersRift = true;
-
-  // ✅ no duplicados por nombre
-  filter.isDuplicate = false;
+  return String(value).toLowerCase() === "true";
 }
+
+function buildBaseFilter(query) {
+  const locale = toLocale(query.lang || "en");
+  const includeHidden = parseBoolean(query.includeHidden, false);
+
+  const group = query.group || "all";
+  const section = query.section || "";
+  const tier = query.tier || "";
+
+  const filter = { locale };
+
+  if (!includeHidden) {
+    filter.isVisible = true;
+    filter.isRemoved = false;
+    filter.isDuplicate = false;
+    filter.shopGroup = { $ne: "hidden" };
+  }
+
+  if (group && group !== "all") {
+    filter.shopGroup = group;
+  }
+
+  if (section) {
+    filter.shopSection = section;
+  }
+
+  if (tier) {
+    filter.tier = tier;
+  }
+
+  return filter;
+}
+
+function applySearch(filter, search) {
+  if (!search) return filter;
+
+  const regex = { $regex: search, $options: "i" };
+
+  return {
+    ...filter,
+    $or: [
+      { name: regex },
+      { catalogName: regex },
+      { plaintext: regex },
+      { descriptionText: regex },
+      { tags: regex },
+    ],
+  };
+}
+
+function applyGold(filter, minGold, maxGold) {
+  if (minGold == null && maxGold == null) return filter;
+
+  const goldFilter = {};
+
+  if (minGold != null) {
+    goldFilter.$gte = Number(minGold);
+  }
+
+  if (maxGold != null) {
+    goldFilter.$lte = Number(maxGold);
+  }
+
+  return {
+    ...filter,
+    "gold.total": goldFilter,
+  };
+}
+
+function buildSort(sort = "name") {
+  if (sort === "gold_asc") return { "gold.total": 1, catalogOrder: 1 };
+  if (sort === "gold_desc") return { "gold.total": -1, catalogOrder: 1 };
+
+  // Orden principal del catálogo curado.
+  return { catalogOrder: 1, name: 1 };
+}
+
+const ITEM_LIST_SELECT = [
+  "itemId",
+  "catalogName",
+  "catalogStatus",
+  "catalogOrder",
+  "name",
+  "plaintext",
+  "iconUrl",
+  "gold",
+  "tags",
+  "locale",
+  "tier",
+  "shopGroup",
+  "shopSection",
+  "roleGroups",
+  "isArena",
+  "isVisible",
+].join(" ");
+
+const ITEM_RELATION_SELECT = [
+  "itemId",
+  "catalogName",
+  "name",
+  "iconUrl",
+  "gold",
+  "tier",
+  "shopGroup",
+  "shopSection",
+  "roleGroups",
+  "catalogOrder",
+].join(" ");
 
 export async function listItems(req, res) {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 20;
   const skip = (page - 1) * limit;
 
-  const locale = toLocale(req.query.lang || "en");
-
   const search = req.query.search;
   const tags = parseCsv(req.query.tags);
-  const roles = parseCsv(req.query.roles); // fighter,mage,tank...
-  const tier = req.query.tier || "";
-  const section = req.query.section || "";
-
+  const roles = parseCsv(req.query.roles);
   const minGold = req.query.minGold;
   const maxGold = req.query.maxGold;
-
   const sort = req.query.sort || "name";
 
-  const includeHidden = Boolean(req.query.includeHidden);
-  const shopOnly = req.query.shopOnly !== "false"; // default true
-
   try {
-    const filter = { locale };
+    let filter = buildBaseFilter(req.query);
 
-    if (!includeHidden) {
-      applyShopOnly(filter, shopOnly);
-    } else {
-      // si incluye hidden, igual podemos limpiar variants si shopOnly
-      if (shopOnly) filter.isVariant = false;
+    filter = applySearch(filter, search);
+    filter = applyGold(filter, minGold, maxGold);
+
+    if (tags.length) {
+      filter.tags = { $in: tags };
     }
 
-    if (search) filter.name = { $regex: search, $options: "i" };
-    if (tags.length) filter.tags = { $in: tags };
-
-    if (roles.length) filter.roleGroups = { $in: roles };
-    if (tier) filter.tier = tier;
-    if (section) filter.shopSection = section;
-
-    if (minGold != null || maxGold != null) {
-      filter["gold.total"] = {};
-      if (minGold != null) filter["gold.total"].$gte = Number(minGold);
-      if (maxGold != null) filter["gold.total"].$lte = Number(maxGold);
+    if (roles.length) {
+      filter.roleGroups = { $in: roles };
     }
-
-    const sortObj =
-      sort === "gold_asc"
-        ? { "gold.total": 1 }
-        : sort === "gold_desc"
-        ? { "gold.total": -1 }
-        : { name: 1 };
 
     const [total, items] = await Promise.all([
       Item.countDocuments(filter),
       Item.find(filter)
-        .select("itemId name iconUrl gold tags plaintext locale tier shopSection roleGroups")
-        .sort(sortObj)
+        .select(ITEM_LIST_SELECT)
+        .sort(buildSort(sort))
         .skip(skip)
         .limit(limit),
     ]);
 
-    info(`Fetched items: locale=${locale} page=${page} limit=${limit} total=${total}`);
+    info(`Fetched items: page=${page} limit=${limit} total=${total}`);
     res.set("Cache-Control", "public, max-age=60");
 
     return res.json({
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        locale: toLocale(req.query.lang || "en"),
+        group: req.query.group || "all",
+        section: req.query.section || null,
+        tier: req.query.tier || null,
+      },
       data: items,
     });
   } catch (err) {
@@ -107,28 +194,24 @@ export async function listItems(req, res) {
 }
 
 export async function listAllItems(req, res) {
-  const locale = toLocale(req.query.lang || "en");
-  const includeHidden = Boolean(req.query.includeHidden);
-  const shopOnly = req.query.shopOnly !== "false"; // default true
-
   try {
-    const filter = { locale };
-
-    if (!includeHidden) {
-      applyShopOnly(filter, shopOnly);
-    } else {
-      if (shopOnly) filter.isVariant = false;
-    }
+    const filter = buildBaseFilter(req.query);
 
     const items = await Item.find(filter)
-      .select("itemId name iconUrl gold tags plaintext locale tier shopSection roleGroups")
-      .sort({ name: 1 });
+      .select(ITEM_LIST_SELECT)
+      .sort({ catalogOrder: 1, name: 1 });
 
-    info(`Fetched all items: locale=${locale} total=${items.length}`);
+    info(`Fetched all items: total=${items.length}`);
     res.set("Cache-Control", "public, max-age=120");
 
     return res.json({
-      meta: { total: items.length, locale },
+      meta: {
+        total: items.length,
+        locale: toLocale(req.query.lang || "en"),
+        group: req.query.group || "all",
+        section: req.query.section || null,
+        tier: req.query.tier || null,
+      },
       data: items,
     });
   } catch (err) {
@@ -143,10 +226,20 @@ export async function getItemById(req, res) {
   const locale = toLocale(lang);
 
   try {
-    const item = await Item.findOne({ itemId: String(id), locale });
+    const item = await Item.findOne({
+      itemId: String(id),
+      locale,
+      isVisible: true,
+      isRemoved: false,
+      isDuplicate: false,
+    });
+
     if (!item) {
       warn(`Item not found: itemId=${id} locale=${locale}`);
-      return res.status(404).json({ message: "Item no encontrado" });
+
+      return res.status(404).json({
+        message: lang === "es" ? "Objeto no encontrado" : "Item not found",
+      });
     }
 
     const fromIds = Array.isArray(item.from) ? item.from : [];
@@ -154,47 +247,92 @@ export async function getItemById(req, res) {
 
     const [fromItems, intoItems] = await Promise.all([
       fromIds.length
-        ? Item.find({ locale, itemId: { $in: fromIds } })
-            .select("itemId name iconUrl gold.total tier shopSection roleGroups")
+        ? Item.find({
+            locale,
+            itemId: { $in: fromIds.map(String) },
+            isVisible: true,
+            isRemoved: false,
+            isDuplicate: false,
+          })
+            .select(ITEM_RELATION_SELECT)
             .lean()
         : Promise.resolve([]),
 
       intoIds.length
-        ? Item.find({ locale, itemId: { $in: intoIds } })
-            .select("itemId name iconUrl gold.total tier shopSection roleGroups")
+        ? Item.find({
+            locale,
+            itemId: { $in: intoIds.map(String) },
+            isVisible: true,
+            isRemoved: false,
+            isDuplicate: false,
+          })
+            .select(ITEM_RELATION_SELECT)
             .lean()
         : Promise.resolve([]),
     ]);
 
-    const byId = (arr) => new Map(arr.map((x) => [String(x.itemId), x]));
-    const fromMap = byId(fromItems);
-    const intoMap = byId(intoItems);
-
-    const fromOrdered = fromIds.map((x) => fromMap.get(String(x))).filter(Boolean);
-    const intoOrdered = intoIds.map((x) => intoMap.get(String(x))).filter(Boolean);
-
-    info(`Fetched item: itemId=${id} locale=${locale}`);
-    res.set("Cache-Control", "public, max-age=180");
+    const fromMap = new Map(fromItems.map((fromItem) => [String(fromItem.itemId), fromItem]));
+    const intoMap = new Map(intoItems.map((intoItem) => [String(intoItem.itemId), intoItem]));
 
     const payload = item.toJSON();
-    payload.fromItems = fromOrdered;
-    payload.intoItems = intoOrdered;
+
+    // Mantiene el orden original de la receta.
+    payload.fromItems = fromIds.map((itemId) => fromMap.get(String(itemId))).filter(Boolean);
+    payload.intoItems = intoIds.map((itemId) => intoMap.get(String(itemId))).filter(Boolean);
+
+    res.set("Cache-Control", "public, max-age=120");
 
     return res.json(payload);
   } catch (err) {
-    error("Error fetching item by id", { err });
+    error("Error fetching item detail", { err });
+    throw err;
+  }
+}
+
+export async function listItemTags(req, res) {
+  try {
+    const filter = buildBaseFilter(req.query);
+    const tags = await Item.distinct("tags", filter);
+
+    return res.json({
+      meta: {
+        total: tags.length,
+        locale: toLocale(req.query.lang || "en"),
+        group: req.query.group || "all",
+      },
+      data: tags.filter(Boolean).sort(),
+    });
+  } catch (err) {
+    error("Error listing item tags", { err });
     throw err;
   }
 }
 
 export async function itemsMeta(req, res) {
   try {
-    const last = await Item.findOne().sort({ updatedAt: -1 }).select("ddragonVersion updatedAt");
+    const locale = toLocale(req.query.lang || "en");
+
+    const [total, visible, main, arena, special, manual] = await Promise.all([
+      Item.countDocuments({ locale }),
+      Item.countDocuments({ locale, isVisible: true }),
+      Item.countDocuments({ locale, isVisible: true, shopGroup: "main" }),
+      Item.countDocuments({ locale, isVisible: true, shopGroup: "arena" }),
+      Item.countDocuments({ locale, isVisible: true, shopGroup: "special" }),
+      Item.countDocuments({ locale, isVisible: true, catalogStatus: "manual" }),
+    ]);
+
     return res.json({
-      module: "items",
-      ddragonVersion: last?.ddragonVersion || "",
-      locales: ["en_US", "es_ES"],
-      updatedAt: last?.updatedAt || null,
+      data: {
+        locale,
+        total,
+        visible,
+        manual,
+        groups: {
+          main,
+          arena,
+          special,
+        },
+      },
     });
   } catch (err) {
     error("Error fetching items meta", { err });
@@ -202,101 +340,76 @@ export async function itemsMeta(req, res) {
   }
 }
 
-// GET /api/v1/items/tags
-export async function listItemTags(req, res) {
-  try {
-    const lang = req.query.lang || "en";
-    const locale = lang === "es" ? "es_ES" : "en_US";
-    const includeHidden = Boolean(req.query.includeHidden);
-    const shopOnly = req.query.shopOnly !== "false"; // default true
-
-    const match = { locale };
-    if (!includeHidden && shopOnly) {
-      match.isVariant = false;
-      match.inStore = true;
-      match.hideFromAll = false;
-      match.isSummonersRift = true;
-      match.isDuplicate = false;
-    } else if (!includeHidden) {
-      match.inStore = true;
-      match.hideFromAll = false;
-    } else if (shopOnly) {
-      match.isVariant = false;
-    }
-
-    const rows = await Item.aggregate([
-      { $match: match },
-      { $unwind: "$tags" },
-      { $match: { tags: { $type: "string", $ne: "" } } },
-      { $group: { _id: "$tags" } },
-      { $sort: { _id: 1 } },
-    ]);
-
-    const tags = rows.map((r) => r._id);
-
-    res.set("Cache-Control", "public, max-age=300");
-    return res.json({
-      meta: { locale, total: tags.length },
-      data: tags,
-    });
-  } catch (err) {
-    throw err;
-  }
-}
-
-// GET /api/v1/items/meta/filters
 export async function itemsFiltersMeta(req, res) {
   try {
-    const lang = req.query.lang || "en";
-    const locale = toLocale(lang);
-    const includeHidden = Boolean(req.query.includeHidden);
-    const shopOnly = req.query.shopOnly !== "false"; // default true
+    const filter = buildBaseFilter(req.query);
 
-    const match = { locale };
-    if (!includeHidden && shopOnly) {
-      match.isVariant = false;
-      match.inStore = true;
-      match.hideFromAll = false;
-      match.isSummonersRift = true;
-      match.isDuplicate = false;
-    } else if (!includeHidden) {
-      match.inStore = true;
-      match.hideFromAll = false;
-    } else if (shopOnly) {
-      match.isVariant = false;
-    }
-
-    const [sectionsRows, tiersRows, rolesRows] = await Promise.all([
+    const [sectionsRaw, tiersRaw, rolesRaw, tagsRaw] = await Promise.all([
       Item.aggregate([
-        { $match: match },
-        { $match: { shopSection: { $ne: "" } } },
+        { $match: filter },
         { $group: { _id: "$shopSection", total: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
+
       Item.aggregate([
-        { $match: match },
+        { $match: filter },
         { $match: { tier: { $ne: "" } } },
         { $group: { _id: "$tier", total: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
+
       Item.aggregate([
-        { $match: match },
+        { $match: filter },
         { $unwind: "$roleGroups" },
-        { $match: { roleGroups: { $type: "string", $ne: "" } } },
         { $group: { _id: "$roleGroups", total: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+
+      Item.aggregate([
+        { $match: filter },
+        { $unwind: "$tags" },
+        { $group: { _id: "$tags", total: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
     ]);
 
     return res.json({
-      meta: { locale, shopOnly, includeHidden },
+      meta: {
+        locale: toLocale(req.query.lang || "en"),
+        group: req.query.group || "all",
+      },
       data: {
-        sections: sectionsRows.map((x) => ({ key: x._id, total: x.total })),
-        tiers: tiersRows.map((x) => ({ key: x._id, total: x.total })),
-        roles: rolesRows.map((x) => ({ key: x._id, total: x.total })),
+        sections: sectionsRaw
+          .filter((section) => section._id)
+          .map((section) => ({
+            key: section._id,
+            total: section.total,
+          })),
+
+        tiers: tiersRaw
+          .filter((tier) => tier._id)
+          .map((tier) => ({
+            key: tier._id,
+            total: tier.total,
+          })),
+
+        roles: rolesRaw
+          .filter((role) => role._id)
+          .map((role) => ({
+            key: role._id,
+            total: role.total,
+          })),
+
+        tags: tagsRaw
+          .filter((tag) => tag._id)
+          .map((tag) => ({
+            key: tag._id,
+            total: tag.total,
+          })),
       },
     });
   } catch (err) {
+    error("Error fetching items filters meta", { err });
     throw err;
   }
 }

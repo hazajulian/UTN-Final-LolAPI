@@ -1,15 +1,15 @@
-// Items.jsx — Items Shop (LoL premium, coherente con Home)
-// - Trae TODOS los items del shop (usa /items/all recomendado por tu swagger)
-// - Filtros: Section + Tier (en dropdown), Roles (chips), Search local
-// - Grid NO corta a 20 items
-// - Click abre modal premium (ItemsModal) usando /items/:id
+// Items.jsx — Items Shop
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { en } from "../../i18n/en";
 import { es } from "../../i18n/es";
 
-import { getItemsAll, getItemsFiltersMeta, getItemById } from "../../services/api";
+import {
+  getItemsAll,
+  getItemsFiltersMeta,
+  getItemById,
+} from "../../services/api";
 
 import { SearchBarItems } from "../../components/SearchBarItems/SearchBarItems";
 import { ItemsModal } from "../../components/ItemsModal/ItemsModal";
@@ -21,6 +21,52 @@ const SORT_OPTIONS = [
   { value: "name-desc", labelEN: "Z → A", labelES: "Z → A" },
 ];
 
+const ITEM_GROUPS = ["main", "arena", "special"];
+
+const FALLBACK_SECTIONS = [
+  "starter",
+  "consumable",
+  "trinket",
+  "distributed",
+  "boots",
+  "basic",
+  "epic",
+  "legendary",
+  "champion_exclusive",
+  "minion_turret",
+  "arena_prismatic",
+  "arena_anvil",
+  "arena_exclusive",
+];
+
+const HIDDEN_SECTIONS = ["item"];
+
+const ROLES = [
+  "all",
+  "tank",
+  "mage",
+  "marksman",
+  "fighter",
+  "assassin",
+  "support",
+];
+
+const SECTION_LABEL_KEYS = {
+  starter: "sectionStarter",
+  consumable: "sectionConsumable",
+  trinket: "sectionTrinket",
+  distributed: "sectionDistributed",
+  boots: "sectionBoots",
+  basic: "sectionBasic",
+  epic: "sectionEpic",
+  legendary: "sectionLegendary",
+  champion_exclusive: "sectionChampionExclusive",
+  minion_turret: "sectionMinionTurret",
+  arena_prismatic: "sectionArenaPrismatic",
+  arena_anvil: "sectionArenaAnvil",
+  arena_exclusive: "sectionArenaExclusive",
+};
+
 function normalizeList(res) {
   if (Array.isArray(res?.data)) return res.data;
   if (Array.isArray(res)) return res;
@@ -28,55 +74,78 @@ function normalizeList(res) {
 }
 
 function sortByName(list, sortValue) {
-  const arr = Array.isArray(list) ? [...list] : [];
-  const dir = sortValue === "name-desc" ? -1 : 1;
+  const items = Array.isArray(list) ? [...list] : [];
+  const direction = sortValue === "name-desc" ? -1 : 1;
 
-  arr.sort((a, b) => {
-    const an = String(a?.name ?? "");
-    const bn = String(b?.name ?? "");
-    return an.localeCompare(bn, undefined, { sensitivity: "base" }) * dir;
+  items.sort((a, b) => {
+    const nameA = String(a?.name ?? "");
+    const nameB = String(b?.name ?? "");
+
+    return nameA.localeCompare(nameB, undefined, { sensitivity: "base" }) * direction;
   });
 
-  return arr;
+  return items;
 }
 
-// Normaliza tags a array de strings (por si viene raro)
-function getItemTags(it) {
-  const t = it?.tags;
-  if (Array.isArray(t)) return t.filter(Boolean).map(String);
-  if (typeof t === "string") return t.split(",").map((x) => x.trim()).filter(Boolean);
+function getItemTags(item) {
+  if (Array.isArray(item?.tags)) return item.tags.filter(Boolean).map(String);
+
+  if (typeof item?.tags === "string") {
+    return item.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+
   return [];
+}
+
+function formatFallbackLabel(value) {
+  return String(value)
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export default function Items({ lang = "EN" }) {
   const dict = useMemo(() => (lang === "EN" ? en : es), [lang]);
 
-  // i18n local (no obliga a tocar en/es.js hoy)
   const ui = useMemo(() => {
     const isEN = lang === "EN";
+    const itemsDict = dict?.items ?? {};
+
     return {
-      title: isEN ? "Items" : "Objetos",
-      filterAll: isEN ? "All" : "Todas",
-      searchPh: isEN ? "Search items..." : "Buscar objetos...",
-      hint: isEN
-        ? "Explore items and filter by section, tier and roles."
-        : "Explorá items y filtrá por sección, tier y roles.",
-      loading: isEN ? "Loading items..." : "Cargando objetos...",
-      errorLoad: isEN ? "Could not load items." : "No se pudieron cargar los objetos.",
-      rolesLabel: isEN ? "ROLES" : "ROLES",
-      countLabel: isEN ? "Showing" : "Mostrando",
-
-      tierBasic: isEN ? "Tier: Basic" : "Tier: Basic",
-      tierEpic: isEN ? "Tier: Epic" : "Tier: Epic",
-      tierLegendary: isEN ? "Tier: Legendary" : "Tier: Legendary",
-
-      tiersHeader: isEN ? "Tiers" : "Tiers",
-      sectionsHeader: isEN ? "Sections" : "Secciones",
+      title: itemsDict.title ?? (isEN ? "Items" : "Objetos"),
+      filterAll: itemsDict.filterAll ?? (isEN ? "All" : "Todos"),
+      searchPh:
+        itemsDict.searchPlaceholder ??
+        (isEN ? "Search items..." : "Buscar objetos..."),
+      hint:
+        itemsDict.hint ??
+        (isEN
+          ? "Explore items and filter by section, tier and roles."
+          : "Explorá items y filtrá por sección, tier y roles."),
+      loading:
+        itemsDict.loading ??
+        (isEN ? "Loading items..." : "Cargando objetos..."),
+      errorLoad:
+        itemsDict.errorLoad ??
+        (isEN ? "Could not load items." : "No se pudieron cargar los objetos."),
+      rolesLabel: itemsDict.rolesLabel ?? "ROLES",
+      countLabel: itemsDict.countLabel ?? (isEN ? "Showing" : "Mostrando"),
+      sectionsHeader:
+        itemsDict.filterSections ?? (isEN ? "Sections" : "Secciones"),
+      tiersHeader: itemsDict.filterTiers ?? "Tiers",
+      tierBasic: itemsDict.tierBasic ?? (isEN ? "Tier: Basic" : "Tier: Básico"),
+      tierEpic: itemsDict.tierEpic ?? (isEN ? "Tier: Epic" : "Tier: Épico"),
+      tierLegendary:
+        itemsDict.tierLegendary ??
+        (isEN ? "Tier: Legendary" : "Tier: Legendario"),
     };
-  }, [lang]);
+  }, [dict, lang]);
 
-  const ROLE_LABELS = useMemo(() => {
+  const roleLabels = useMemo(() => {
     const isEN = lang === "EN";
+
     return {
       all: isEN ? "All" : "Todos",
       tank: isEN ? "Tank" : "Tanque",
@@ -88,34 +157,26 @@ export default function Items({ lang = "EN" }) {
     };
   }, [lang]);
 
-  // -----------------------------
-  // States
-  // -----------------------------
+  const dropdownRef = useRef(null);
+
   const [rawSearch, setRawSearch] = useState("");
   const [sortValue, setSortValue] = useState("name-asc");
 
-  // dropdown principal: “All / Section / Tier”
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const [section, setSection] = useState("all"); // shopSection
-  const [tier, setTier] = useState("all"); // basic/epic/legendary
-  const [role, setRole] = useState("all"); // tank/mage...
+  const [section, setSection] = useState("all");
+  const [tier, setTier] = useState("all");
+  const [role, setRole] = useState("all");
 
   const [filtersMeta, setFiltersMeta] = useState(null);
 
-  // catálogo completo (all)
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // modal
   const [selected, setSelected] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // -----------------------------
-  // Effects
-  // -----------------------------
+  // Sube al inicio al cambiar idioma.
   useEffect(() => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -124,200 +185,241 @@ export default function Items({ lang = "EN" }) {
     });
   }, [lang]);
 
+  // Cierra el dropdown al hacer click afuera.
   useEffect(() => {
-    const onClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Meta filtros (sections/tiers/roles)
+  // Carga metadata de filtros.
   useEffect(() => {
     let alive = true;
 
     async function loadMeta() {
       try {
         const apiLang = lang === "EN" ? "en" : "es";
-        const res = await getItemsFiltersMeta({ lang: apiLang });
 
-        // shape real del back:
-        // { meta: {...}, data: { sections:[{key,total}], tiers:[...], roles:[...] } }
+        const results = await Promise.all(
+          ITEM_GROUPS.map((group) =>
+            getItemsFiltersMeta({
+              lang: apiLang,
+              group,
+              shopOnly: true,
+              includeHidden: false,
+            })
+          )
+        );
+
         if (!alive) return;
-        setFiltersMeta(res?.data ?? null);
+
+        const sections = results.flatMap((res) => {
+          const list = res?.data?.sections;
+          return Array.isArray(list) ? list : [];
+        });
+
+        const uniqueSections = Array.from(
+          new Map(
+            sections
+              .filter((item) => item?.key)
+              .map((item) => [item.key, item])
+          ).values()
+        );
+
+        setFiltersMeta({ sections: uniqueSections });
       } catch {
-        // meta no es crítico
+        // La metadata no es crítica.
       }
     }
 
     loadMeta();
+
     return () => {
       alive = false;
     };
   }, [lang]);
 
-  // Cargar catálogo completo usando /items/all
+  // Carga todos los items visibles.
   useEffect(() => {
     let alive = true;
 
-    async function loadAll() {
+    async function loadAllItems() {
       try {
         setLoading(true);
         setError(null);
 
         const apiLang = lang === "EN" ? "en" : "es";
-        const res = await getItemsAll({ lang: apiLang });
-        const list = normalizeList(res);
+
+        const results = await Promise.all(
+          ITEM_GROUPS.map((group) =>
+            getItemsAll({
+              lang: apiLang,
+              group,
+              shopOnly: true,
+              includeHidden: false,
+              dedupe: true,
+            })
+          )
+        );
+
+        const list = results.flatMap((res) => normalizeList(res));
 
         if (!alive) return;
 
-        // Normalizo id y dejo campos del back tal cual (tier/shopSection/roleGroups)
-        const safe = list
-          .filter((it) => it && it.itemId && it.name)
-          .map((it) => ({
-            ...it,
-            id: it.itemId, // para key/click
+        const safeItems = list
+          .filter((item) => item?.itemId && item?.name)
+          .map((item) => ({
+            ...item,
+            id: item.itemId,
           }));
 
-        setAllItems(safe);
+        setAllItems(safeItems);
       } catch {
-        if (!alive) return;
-        setError(ui.errorLoad);
+        if (alive) setError(ui.errorLoad);
       } finally {
         if (alive) setLoading(false);
       }
     }
 
-    loadAll();
+    loadAllItems();
+
     return () => {
       alive = false;
     };
   }, [lang, ui.errorLoad]);
 
-  // -----------------------------
-  // Dropdown label
-  // -----------------------------
-  const dropdownLabel = useMemo(() => {
-    if (tier !== "all") return `Tier: ${String(tier).toUpperCase()}`;
-    if (section !== "all") return String(section).toUpperCase();
-    return ui.filterAll;
-  }, [section, tier, ui.filterAll]);
-
-  // -----------------------------
-  // Options desde meta (fallback seguro)
-  // -----------------------------
   const sectionOptions = useMemo(() => {
-    const arr = filtersMeta?.sections;
-    if (Array.isArray(arr) && arr.length) {
-      return arr
-        .map((x) => x?.key)
-        .filter(Boolean);
-    }
-    return ["starter", "consumable", "trinket", "boots", "basic", "epic", "legendary"];
+    const sections = filtersMeta?.sections;
+
+    const list =
+      Array.isArray(sections) && sections.length
+        ? sections.map((item) => item?.key).filter(Boolean)
+        : FALLBACK_SECTIONS;
+
+    return list.filter(
+      (sectionKey) =>
+        !HIDDEN_SECTIONS.includes(String(sectionKey).toLowerCase())
+    );
   }, [filtersMeta]);
 
-  // -----------------------------
-  // Filtering helpers (usando fields del BACK)
-  // -----------------------------
-  function passesSection(it) {
+  const sectionLabel = (sectionKey) => {
+    const labelKey = SECTION_LABEL_KEYS[sectionKey];
+    return dict?.items?.[labelKey] ?? formatFallbackLabel(sectionKey);
+  };
+
+  const dropdownLabel = useMemo(() => {
+    if (tier !== "all") return `Tier: ${String(tier).toUpperCase()}`;
+    if (section !== "all") return sectionLabel(section).toUpperCase();
+    return ui.filterAll;
+  }, [section, tier, ui.filterAll, dict]);
+
+  function passesSection(item) {
     if (section === "all") return true;
-    return String(it?.shopSection ?? "").toLowerCase() === String(section).toLowerCase();
+
+    return (
+      String(item?.shopSection ?? "").toLowerCase() ===
+      String(section).toLowerCase()
+    );
   }
 
-  function passesTier(it) {
+  function passesTier(item) {
     if (tier === "all") return true;
-    return String(it?.tier ?? "").toLowerCase() === String(tier).toLowerCase();
+
+    return (
+      String(item?.shopGroup ?? "").toLowerCase() === "main" &&
+      String(item?.tier ?? "").toLowerCase() === String(tier).toLowerCase()
+    );
   }
 
-  function passesRole(it) {
+  function passesRole(item) {
     if (role === "all") return true;
 
-    const rg = Array.isArray(it?.roleGroups) ? it.roleGroups.map(String) : [];
-    const rgLower = rg.map((x) => x.toLowerCase());
-    return rgLower.includes(String(role).toLowerCase());
+    const groups = Array.isArray(item?.roleGroups)
+      ? item.roleGroups.map((group) => String(group).toLowerCase())
+      : [];
+
+    return groups.includes(String(role).toLowerCase());
   }
 
-  function passesSearch(it, q) {
-    if (!q) return true;
+  function passesSearch(item, query) {
+    if (!query) return true;
 
-    const name = String(it?.name ?? "").toLowerCase();
-    const plaintext = String(it?.plaintext ?? "").toLowerCase();
-    const tags = getItemTags(it).join(" ").toLowerCase();
+    const name = String(item?.name ?? "").toLowerCase();
+    const plaintext = String(item?.plaintext ?? "").toLowerCase();
+    const tags = getItemTags(item).join(" ").toLowerCase();
+    const shopSection = String(item?.shopSection ?? "").toLowerCase();
+    const shopGroup = String(item?.shopGroup ?? "").toLowerCase();
 
-    return name.includes(q) || plaintext.includes(q) || tags.includes(q);
+    return (
+      name.includes(query) ||
+      plaintext.includes(query) ||
+      tags.includes(query) ||
+      shopSection.includes(query) ||
+      shopGroup.includes(query)
+    );
   }
 
-  // -----------------------------
-  // Derived list (search + filters + sort local)
-  // -----------------------------
   const visibleItems = useMemo(() => {
-    const q = rawSearch.trim().toLowerCase();
+    const query = rawSearch.trim().toLowerCase();
 
     const filtered = allItems
-      .filter((it) => passesSection(it))
-      .filter((it) => passesTier(it))
-      .filter((it) => passesRole(it))
-      .filter((it) => passesSearch(it, q));
+      .filter((item) => passesSection(item))
+      .filter((item) => passesTier(item))
+      .filter((item) => passesRole(item))
+      .filter((item) => passesSearch(item, query));
 
     return sortByName(filtered, sortValue);
   }, [allItems, rawSearch, sortValue, section, tier, role]);
 
-  // -----------------------------
-  // Handlers
-  // -----------------------------
-  const pickAll = () => {
+  function pickAll() {
     setSection("all");
     setTier("all");
     setOpen(false);
-  };
+  }
 
-  const pickSection = (sec) => {
-    setSection(sec);
-    setTier("all"); // uno u otro
+  function pickSection(value) {
+    setSection(value);
+    setTier("all");
     setOpen(false);
-  };
+  }
 
-  const pickTier = (tval) => {
-    setTier(tval);
-    setSection("all"); // uno u otro
+  function pickTier(value) {
+    setTier(value);
+    setSection("all");
     setOpen(false);
-  };
+  }
 
-  const openModal = async (it) => {
+  async function openModal(item) {
     try {
       const apiLang = lang === "EN" ? "en" : "es";
-
-      // Pedimos detalle real para descriptionRaw/descriptionText y build path
-      const detail = await getItemById(it?.id ?? it?.itemId, { lang: apiLang });
-
-      // Adaptamos a lo que espera ItemsModal:
-      // - ItemsModal usa item.description (HTML)
-      // - Back devuelve descriptionRaw (HTML) + descriptionText (plain)
-      const mapped = {
-        ...detail,
-        description: detail?.descriptionRaw || "", // HTML para el modal
-      };
-
-      setSelected(mapped);
-      setModalOpen(true);
-    } catch {
-      // Fallback: si falla detalle, abrimos con la data liviana
-      setSelected({
-        ...it,
-        description: "", // no hay detalle
+      const detail = await getItemById(item?.id ?? item?.itemId, {
+        lang: apiLang,
       });
+
+      setSelected({
+        ...detail,
+        description: detail?.descriptionRaw || "",
+      });
+    } catch {
+      setSelected({
+        ...item,
+        description: item?.descriptionRaw || "",
+      });
+    } finally {
       setModalOpen(true);
     }
-  };
+  }
 
-  const closeModal = () => {
+  function closeModal() {
     setModalOpen(false);
     setSelected(null);
-  };
+  }
 
-  // -----------------------------
-  // Render
-  // -----------------------------
   return (
     <main className="items">
       <section className="items__panel" aria-label="Items shop">
@@ -330,12 +432,11 @@ export default function Items({ lang = "EN" }) {
 
           <div className="items__searchWrap">
             <div className="items__searchBarFrame">
-              {/* Dropdown principal: All + Sections + Tier */}
               <div className="items__filter" ref={dropdownRef}>
                 <button
                   className={`items__filterBtn ${open ? "is-open" : ""}`}
                   type="button"
-                  onClick={() => setOpen((o) => !o)}
+                  onClick={() => setOpen((value) => !value)}
                   aria-haspopup="listbox"
                   aria-expanded={open}
                 >
@@ -346,44 +447,68 @@ export default function Items({ lang = "EN" }) {
                 </button>
 
                 {open && (
-                  <div className="items__filterList" role="listbox" aria-label="Items filters">
-                    <button type="button" className="items__filterItem" onClick={pickAll}>
+                  <div
+                    className="items__filterList"
+                    role="listbox"
+                    aria-label="Items filters"
+                  >
+                    <button
+                      type="button"
+                      className="items__filterItem items__filterItem--full"
+                      onClick={pickAll}
+                    >
                       {ui.filterAll}
                     </button>
 
-                    <div className="items__filterGroupTitle">{ui.sectionsHeader}</div>
+                    <div className="items__filterGroupTitle">
+                      {ui.sectionsHeader}
+                    </div>
+
                     <div className="items__filterGrid">
-                      {sectionOptions.map((sec) => (
+                      {sectionOptions.map((itemSection) => (
                         <button
-                          key={sec}
+                          key={itemSection}
                           type="button"
-                          className="items__filterItem"
-                          onClick={() => pickSection(sec)}
+                          className={`items__filterItem ${
+                            section === itemSection ? "is-active" : ""
+                          }`}
+                          onClick={() => pickSection(itemSection)}
                         >
-                          {String(sec).toUpperCase()}
+                          {sectionLabel(itemSection)}
                         </button>
                       ))}
                     </div>
 
-                    <div className="items__filterGroupTitle">{ui.tiersHeader}</div>
+                    <div className="items__filterGroupTitle">
+                      {ui.tiersHeader}
+                    </div>
+
                     <div className="items__filterGrid">
                       <button
                         type="button"
-                        className="items__filterItem"
+                        className={`items__filterItem ${
+                          tier === "basic" ? "is-active" : ""
+                        }`}
                         onClick={() => pickTier("basic")}
                       >
                         {ui.tierBasic}
                       </button>
+
                       <button
                         type="button"
-                        className="items__filterItem"
+                        className={`items__filterItem ${
+                          tier === "epic" ? "is-active" : ""
+                        }`}
                         onClick={() => pickTier("epic")}
                       >
                         {ui.tierEpic}
                       </button>
+
                       <button
                         type="button"
-                        className="items__filterItem"
+                        className={`items__filterItem ${
+                          tier === "legendary" ? "is-active" : ""
+                        }`}
                         onClick={() => pickTier("legendary")}
                       >
                         {ui.tierLegendary}
@@ -393,7 +518,6 @@ export default function Items({ lang = "EN" }) {
                 )}
               </div>
 
-              {/* SearchBar de Items (la que mostraste) */}
               <SearchBarItems
                 value={rawSearch}
                 onChange={setRawSearch}
@@ -406,19 +530,20 @@ export default function Items({ lang = "EN" }) {
               />
             </div>
 
-            {/* Roles */}
             <div className="items__rolesRow" aria-label="Roles filter">
               <span className="items__rolesLabel">{ui.rolesLabel}</span>
 
               <div className="items__chips">
-                {["all", "tank", "mage", "marksman", "fighter", "assassin", "support"].map((r) => (
+                {ROLES.map((itemRole) => (
                   <button
-                    key={r}
+                    key={itemRole}
                     type="button"
-                    className={`items__chip ${role === r ? "is-active" : ""}`}
-                    onClick={() => setRole(r)}
+                    className={`items__chip ${
+                      role === itemRole ? "is-active" : ""
+                    }`}
+                    onClick={() => setRole(itemRole)}
                   >
-                    {ROLE_LABELS[r]}
+                    {roleLabels[itemRole]}
                   </button>
                 ))}
               </div>
@@ -432,24 +557,29 @@ export default function Items({ lang = "EN" }) {
           </div>
         </header>
 
-        {loading && <p className="items__status items__status--loading">{ui.loading}</p>}
-        {error && <p className="items__status items__status--error">{error}</p>}
+        {loading && (
+          <p className="items__status items__status--loading">{ui.loading}</p>
+        )}
+
+        {error && (
+          <p className="items__status items__status--error">{error}</p>
+        )}
 
         {!loading && !error && (
           <section className="items__grid" aria-label="Items grid">
-            {visibleItems.map((it) => (
+            {visibleItems.map((item) => (
               <button
-                key={it.id}
+                key={`${item.shopGroup}-${item.id}`}
                 type="button"
                 className="items__item"
-                title={it.name}
-                onClick={() => openModal(it)}
+                title={item.name}
+                onClick={() => openModal(item)}
               >
                 <span className="items__iconFrame">
                   <img
                     className="items__icon"
-                    src={it.iconUrl}
-                    alt={it.name}
+                    src={item.iconUrl}
+                    alt={item.name}
                     loading="lazy"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
@@ -462,8 +592,12 @@ export default function Items({ lang = "EN" }) {
         )}
       </section>
 
-      {/* Modal premium */}
-      <ItemsModal open={modalOpen} item={selected} onClose={closeModal} lang={lang} />
+      <ItemsModal
+        open={modalOpen}
+        item={selected}
+        onClose={closeModal}
+        lang={lang}
+      />
     </main>
   );
 }
