@@ -1,27 +1,29 @@
-// Configuración y arranque del servidor: conexión a DB, rutas y Swagger
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
+// Configuración y arranque del servidor: conexión a DB y rutas principales.
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
 
-import { connectDB } from '../startpoint/mongo.js';
-import userRouter from '../routes/user-route.js';
-import contactRouter from '../routes/contact-route.js';
-import championsRouter from '../routes/champions-route.js';
+import { connectDB } from "../startpoint/mongo.js";
+import userRouter from "../routes/user-route.js";
+import contactRouter from "../routes/contact-route.js";
+import championsRouter from "../routes/champions-route.js";
 import itemsRouter from "../routes/items-route.js";
-import metaRouter from '../routes/meta-route.js';
+import summonerSpellsRouter from "../routes/summoner-spells-route.js";
+import runesRouter from "../routes/runes-route.js";
+import regionsRouter from "../routes/regions-routes.js";
+import metaRouter from "../routes/meta-route.js";
 
-import { errorHandler } from '../middleware/errorHandler.js';
-import { info, error } from '../utils/logger.js';
+import { errorHandler } from "../middleware/errorHandler.js";
+import { info, error } from "../utils/logger.js";
 
 /* ============================
    DB
    ============================ */
 try {
   await connectDB();
-  info('MongoDB conectado');
+  info("MongoDB conectado");
 } catch (err) {
-  error('Error conectando a MongoDB', { err });
+  error("Error conectando a MongoDB", { err });
   process.exit(1);
 }
 
@@ -29,69 +31,59 @@ const app = express();
 
 /* ============================
    CORS
-   - En dev: permite todo
-   - En prod: permite solo origins de FRONTEND_URL + extras
    ============================ */
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === "production";
 
-// Podés setear FRONTEND_URL=http://localhost:5173 o tu deploy
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  process.env.FRONTEND_URL_2, // opcional
-  process.env.FRONTEND_URL_3  // opcional
+  process.env.FRONTEND_URL_2,
+  process.env.FRONTEND_URL_3,
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, cb) => {
-      // requests sin origin (Postman/REST Client) -> permitir
       if (!origin) return cb(null, true);
-
-      // Dev: permitir todo
       if (!isProd) return cb(null, true);
-
-      // Prod: permitir solo whitelist
       if (allowedOrigins.includes(origin)) return cb(null, true);
 
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   })
 );
 
 app.use(express.json());
 
 /* ============================
-   Swagger JSON
-   ============================ */
-app.get('/swagger.json', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'docs', 'swagger.json'));
-});
-
-app.get('/swagger-es.json', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'docs', 'swagger-es.json'));
-});
-
-/* ============================
    Routes
    ============================ */
 
-// Meta / Health (público)
-app.use('/api/v1', metaRouter);
+// Meta / Health
+app.use("/api/v1", metaRouter);
 
 // Auth
-app.use('/api/v1/auth', userRouter);
+app.use("/api/v1/auth", userRouter);
 
 // Contact
-app.use('/api/v1', contactRouter);
+app.use("/api/v1", contactRouter);
 
 // Champions
-app.use('/api/v1/champions', championsRouter);
+app.use("/api/v1/champions", championsRouter);
 
-// Items (Tienda)
+// Items
 app.use("/api/v1/items", itemsRouter);
+
+// Summoner Spells
+app.use("/api/v1/summoner-spells", summonerSpellsRouter);
+
+// Runes
+app.use("/api/v1/runes", runesRouter);
+
+// Regions
+app.use("/api/v1/regions", regionsRouter);
 
 /* ============================
    Errors
@@ -99,6 +91,7 @@ app.use("/api/v1/items", itemsRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3010;
+
 app.listen(PORT, () => {
   info(`Servidor corriendo en http://localhost:${PORT}`);
 });

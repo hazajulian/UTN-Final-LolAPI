@@ -376,6 +376,8 @@
 
 .home__grid--section {
   margin-top: 10px;
+  justify-content: start;
+  padding-left: 18px;
 }
 
 .home__card {

@@ -12,7 +12,10 @@
     "seed:champions": "node scripts/ddragon/syncSeedDdragon.js",
     "seed:items": "node scripts/ddragon/syncItems.js",
     "debug:items": "node scripts/ddragon/debugItems.js",
-    "seed:all": "npm run seed:champions && npm run seed:items"
+    "seed:summoners": "node scripts/ddragon/syncSummonerSpells.js",
+    "seed:runes": "node scripts/ddragon/syncRunes.js",
+    "sync:regions": "node scripts/ddragon/syncRegions.js",
+    "seed:all": "npm run seed:champions && npm run seed:items && npm run seed:summoners && npm run seed:runes && npm run sync:regions"
   },
   "keywords": [],
   "author": "",
