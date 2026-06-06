@@ -1,12 +1,6 @@
 /* ============================================================
-   Navbar.css — Dark premium neutral (menos “azul”, más sólido)
-   - Mantiene estructura/clases EXACTAS
-   - Ajuste: padding lateral RESPONSIVO (sin variables)
+   Navbar.css — Dark premium neutral
    ============================================================ */
-
-/* ===========================
-   Header fixed
-   =========================== */
 
 .navbar {
   position: fixed;
@@ -28,7 +22,6 @@
   );
 
   border-bottom: 1px solid rgba(212, 175, 55, 0.18);
-
   transition: transform 220ms ease;
 }
 
@@ -52,20 +45,14 @@
   pointer-events: none;
 }
 
-/* Spacer */
 .navbar__spacer {
   height: 68px;
 }
 
-/* Inner */
 .navbar__inner {
-  /* ✅ ancho alineado con Home/Footer */
   width: min(98%, 1480px);
   margin: 0 auto;
-
   min-height: 68px;
-
-  /* ✅ padding lateral global (responsivo) */
   padding: 12px clamp(10px, 3vw, 18px);
 
   display: flex;
@@ -74,13 +61,10 @@
   gap: 16px;
 }
 
-/* ===========================
-   Left / Brand
-   =========================== */
-
 .navbar__left {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .navbar__brand {
@@ -137,24 +121,23 @@
   display: none;
 }
 
-/* ===========================
-   Center / Links (desktop)
-   =========================== */
-
 .navbar__center {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
   flex: 1;
+  min-width: 0;
 }
 
 .navbar__link {
   position: relative;
+
   font-family: "Cinzel", serif;
   font-weight: 700;
   font-size: 1.02rem;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 
   color: rgba(255, 255, 255, 0.86);
   text-decoration: none;
@@ -189,18 +172,14 @@
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-.navbar__link:hover::after {
+.navbar__link:hover::after,
+.navbar__link.active::after {
   opacity: 1;
   transform: translateY(0);
 }
 
 .navbar__link.active {
   color: rgba(212, 175, 55, 0.98);
-}
-
-.navbar__link.active::after {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .navbar__sep {
@@ -210,16 +189,13 @@
   user-select: none;
 }
 
-/* ===========================
-   Right / Unified menu
-   =========================== */
-
 .navbar__right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
   position: relative;
+  flex-shrink: 0;
 }
 
 .navbar__menu-trigger {
@@ -270,7 +246,6 @@
   transform: translateY(1px) rotate(180deg);
 }
 
-/* Panel */
 .navbar__menu {
   position: absolute;
   top: calc(100% + 10px);
@@ -285,8 +260,8 @@
     rgba(16, 17, 20, 0.96) 0%,
     rgba(10, 11, 13, 0.92) 100%
   );
-  border: 1px solid rgba(212, 175, 55, 0.18);
 
+  border: 1px solid rgba(212, 175, 55, 0.18);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.48);
 
   transform-origin: top right;
@@ -298,13 +273,13 @@
     opacity: 0;
     transform: translateY(-8px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0px) scale(1);
   }
 }
 
-/* Sections */
 .navbar__menu-section {
   display: block;
 }
@@ -319,7 +294,6 @@
   background: rgba(212, 175, 55, 0.16);
 }
 
-/* Links/buttons */
 .navbar__menu-link,
 .navbar__menu-btn {
   width: 100%;
@@ -347,7 +321,7 @@
 .navbar__menu-link:hover,
 .navbar__menu-btn:hover {
   background: rgba(212, 175, 55, 0.08);
-  border-color: rgba(212, 175, 55, 0.20);
+  border-color: rgba(212, 175, 55, 0.2);
   transform: translateY(-1px);
 }
 
@@ -370,8 +344,41 @@
 }
 
 /* ===========================
-   Responsive (px)
+   Responsive
    =========================== */
+
+@media (max-width: 1180px) {
+  .navbar__inner {
+    gap: 12px;
+  }
+
+  .navbar__center {
+    gap: 10px;
+  }
+
+  .navbar__link {
+    font-size: 0.94rem;
+  }
+
+  .navbar__brand {
+    font-size: 0.96rem;
+    padding: 8px 12px;
+  }
+}
+
+/* Desde acá ocultamos Runes y Regions del centro, pero quedan en el menú */
+@media (max-width: 1030px) {
+  .navbar__center > :nth-child(6),
+  .navbar__center > :nth-child(7),
+  .navbar__center > :nth-child(8),
+  .navbar__center > :nth-child(9) {
+    display: none;
+  }
+
+  .navbar__menu-section--primary {
+    display: block;
+  }
+}
 
 @media (max-width: 900px) {
   .navbar__inner {
@@ -385,15 +392,16 @@
   }
 
   .navbar__brand {
-    font-size: 0.98rem;
+    font-size: 0.92rem;
     padding: 8px 12px;
   }
 
   .navbar__link {
-    font-size: 0.98rem;
+    font-size: 0.9rem;
   }
 }
 
+/* Desde acá se ocultan todos los links centrales */
 @media (max-width: 720px) {
   .navbar__center {
     display: none;
@@ -401,6 +409,25 @@
 
   .navbar__menu-section--primary {
     display: block;
+  }
+}
+
+@media (max-width: 420px) {
+  .navbar__inner {
+    gap: 8px;
+  }
+
+  .navbar__brand {
+    padding: 8px 10px;
+    font-size: 0.86rem;
+  }
+
+  .navbar__menu-trigger {
+    padding: 8px 11px;
+  }
+
+  .navbar__menu-label {
+    font-size: 0.9rem;
   }
 }
 
@@ -413,10 +440,6 @@
     display: inline;
   }
 }
-
-/* ===========================
-   Reduce motion (accesibilidad)
-   =========================== */
 
 @media (prefers-reduced-motion: reduce) {
   .navbar {

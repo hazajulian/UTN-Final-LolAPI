@@ -1,5 +1,5 @@
-// App principal: define el enrutamiento y el layout global de la aplicación LoL Champions.
-// Provee los contextos globales (tema, auth) y controla visibilidad de Navbar/Footer.
+// App principal: define el enrutamiento y el layout global de la aplicación LoL API V2.
+// Provee los contextos globales y controla visibilidad de Navbar/Footer.
 
 import React, { useEffect, useState } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
@@ -19,12 +19,14 @@ import "./styles/body.css";
 // Páginas principales
 import Home from "./pages/Home/Home";
 import ChampionDetail from "./pages/ChampionDetail/ChampionDetail";
-import CreateChampion from "./pages/CreateChampion/CreateChampion";
-import EditChampion from "./pages/CreateChampion/EditChampion";
+import Items from "./pages/ItemsShop/Items";
 import Profile from "./pages/Profile/Profile";
 
-// 🆕 ITEMS SHOP
-import Items from "./pages/ItemsShop/Items";
+// Nuevas secciones
+import SummonerSpells from "./pages/SummonerSpells/SummonerSpells";
+import Runes from "./pages/Runes/Runes";
+import Regions from "./pages/Regions/Regions";
+import Documentation from "./pages/Documentation/Documentation";
 
 // Autenticación
 import { Login } from "./pages/Auth/Login";
@@ -34,19 +36,15 @@ import { ResetPassword } from "./pages/Auth/ResetPassword";
 
 // Otros
 import Contact from "./pages/Contact/Contact";
-import SwaggerUI from "./pages/Swagger/Swagger";
 
 export default function App() {
   const location = useLocation();
 
-  // Estado global para el idioma (default: EN, persistente en localStorage)
   const [lang, setLang] = useState(() => localStorage.getItem("lang") || "EN");
 
-  // Rutas donde NO queremos mostrar Navbar/Footer
   const noLayoutRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
   const hideLayout = noLayoutRoutes.includes(location.pathname);
 
-  // Cambia la clase del body según la ruta (para login/register)
   useEffect(() => {
     if (hideLayout) {
       document.body.classList.remove("global-body-style");
@@ -60,20 +58,21 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        {/* Navbar visible solo si NO es ruta de auth */}
         {!hideLayout && <Navbar lang={lang} setLang={setLang} />}
 
         <Routes>
-          {/* Home */}
+          {/* Home / Champions */}
           <Route path="/" element={<Home lang={lang} />} />
-
-          {/* Champions */}
           <Route path="/champions/:id" element={<ChampionDetail lang={lang} />} />
-          <Route path="/create-champion" element={<CreateChampion lang={lang} />} />
-          <Route path="/champions/:id/edit" element={<EditChampion lang={lang} />} />
 
-          {/* 🆕 Items Shop */}
+          {/* Items */}
           <Route path="/items" element={<Items lang={lang} />} />
+
+          {/* Nuevas secciones */}
+          <Route path="/summoner-spells" element={<SummonerSpells lang={lang} />} />
+          <Route path="/runes" element={<Runes lang={lang} />} />
+          <Route path="/regions" element={<Regions lang={lang} />} />
+          <Route path="/documentation" element={<Documentation lang={lang} />} />
 
           {/* Profile */}
           <Route path="/profile" element={<Profile lang={lang} />} />
@@ -86,10 +85,8 @@ export default function App() {
 
           {/* Otros */}
           <Route path="/contact" element={<Contact lang={lang} />} />
-          <Route path="/swagger" element={<SwaggerUI lang={lang} />} />
         </Routes>
 
-        {/* Footer visible solo si NO es ruta de auth */}
         {!hideLayout && <Footer lang={lang} />}
       </AuthProvider>
     </ThemeProvider>

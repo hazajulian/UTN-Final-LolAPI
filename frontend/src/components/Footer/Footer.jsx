@@ -1,12 +1,9 @@
-// Pie de página con links a contacto y documentación de la API, con soporte multilenguaje.
-// Incluye: contacto, repositorio, docs (swagger), créditos Riot/Data Dragon, copyright,
-// y botón "scroll to top".
-// Sin dark/light mode.
+// Pie de página con links de contacto, repositorio y documentación del proyecto.
+// Incluye créditos Riot/Data Dragon y botón "scroll to top".
 
 import React from "react";
 import { Link } from "react-router-dom";
 
-// Traducciones
 import { en } from "../../i18n/en";
 import { es } from "../../i18n/es";
 
@@ -28,14 +25,12 @@ export function Footer({ lang = "EN" }) {
   return (
     <footer className="footer">
       <div className="footer__inner">
-        {/* Left: Brand + disclaimer */}
         <div className="footer__col footer__col--brand">
           <div className="footer__brand">{t.footer.brand}</div>
           <p className="footer__desc">{t.footer.desc}</p>
           <p className="footer__disclaimer">{t.footer.disclaimer}</p>
         </div>
 
-        {/* Center: Links */}
         <nav className="footer__col footer__col--links" aria-label="Footer links">
           <div className="footer__title">{t.footer.linksTitle}</div>
 
@@ -65,7 +60,7 @@ export function Footer({ lang = "EN" }) {
               </span>
             </a>
 
-            <Link className="footer__link" to="/swagger">
+            <Link className="footer__link" to="/documentation">
               <span className="footer__linkLeft">
                 <HiOutlineBookOpen className="footer__icon" aria-hidden="true" />
                 <span>{t.footer.apiDocs}</span>
@@ -74,7 +69,6 @@ export function Footer({ lang = "EN" }) {
           </div>
         </nav>
 
-        {/* Right: Credits + Top */}
         <div className="footer__col footer__col--right">
           <div className="footer__title">{t.footer.creditsTitle}</div>
 
@@ -93,7 +87,6 @@ export function Footer({ lang = "EN" }) {
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="footer__bottom">
         <span className="footer__copy">{t.footer.copyright}</span>
       </div>

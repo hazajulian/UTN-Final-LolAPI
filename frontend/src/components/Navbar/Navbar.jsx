@@ -1,11 +1,11 @@
 // Navbar.jsx
-// Header principal: links + menú unificado en mobile + dropdown (desktop) + opciones según auth.
+// Header principal: links + menú unificado en mobile + dropdown desktop.
 // - Header fijo arriba.
-// - Mobile: un solo menú (Menu) que contiene todo.
-// - Desktop: links al centro + dropdown a la derecha.
+// - Mobile: un solo menú con toda la navegación.
+// - Desktop: links principales al centro + menú a la derecha.
 // - Idioma EN/ES persistido en localStorage.
 // - Cierra menús al click fuera y al navegar.
-// - Auto-hide al scrollear: se oculta al bajar, vuelve al subir (premium UX, no rompe layout).
+// - Auto-hide al scrollear.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
@@ -27,9 +27,6 @@ export function Navbar({ lang, setLang }) {
 
   const t = useMemo(() => (lang === "EN" ? en : es), [lang]);
 
-  /* -----------------------------
-   Helpers
-  ----------------------------- */
   const closeMenu = () => setMenuOpen(false);
 
   const toggleLanguage = () => {
@@ -44,21 +41,16 @@ export function Navbar({ lang, setLang }) {
     navigate("/");
   };
 
-  /* -----------------------------
-   UX: close menu on outside click
-  ----------------------------- */
   useEffect(() => {
     const handleOutsideClick = (e) => {
       const headerEl = headerRef.current;
       if (!headerEl) return;
 
-      // Click fuera del header => cerrar todo
       if (!headerEl.contains(e.target)) {
         setMenuOpen(false);
         return;
       }
 
-      // Click dentro del header pero fuera del menú => cerrar menú
       const menuEl = menuRef.current;
       if (menuEl && !menuEl.contains(e.target)) {
         setMenuOpen(false);
@@ -69,12 +61,6 @@ export function Navbar({ lang, setLang }) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  /* -----------------------------
-   UX: auto-hide header on scroll
-   - Scroll down: hide
-   - Scroll up: show
-   - Cerca del top: siempre visible
-  ----------------------------- */
   useEffect(() => {
     let lastY = window.scrollY;
 
@@ -84,7 +70,6 @@ export function Navbar({ lang, setLang }) {
 
       const y = window.scrollY;
 
-      // Cerca del top: visible siempre (se siente más estable/premium)
       if (y < 12) {
         headerEl.classList.remove("navbar--hidden");
         lastY = y;
@@ -105,7 +90,7 @@ export function Navbar({ lang, setLang }) {
     <>
       <header className="navbar" ref={headerRef}>
         <nav className="navbar__inner" aria-label="Primary navigation">
-          {/* LEFT: External official link (premium button) */}
+          {/* LEFT: Official League of Legends link */}
           <div className="navbar__left">
             <a
               className="navbar__brand"
@@ -121,7 +106,7 @@ export function Navbar({ lang, setLang }) {
             </a>
           </div>
 
-          {/* CENTER: Primary links (desktop) */}
+          {/* CENTER: Main desktop links */}
           <div className="navbar__center" aria-label="Main links">
             <NavLink to="/" className="navbar__link" onClick={closeMenu}>
               {t.navbar?.champions ?? "Champions"}
@@ -139,12 +124,32 @@ export function Navbar({ lang, setLang }) {
               |
             </span>
 
-            <NavLink to="/swagger" className="navbar__link" onClick={closeMenu}>
-              {t.navbar?.swagger ?? "Documentation"}
+            <NavLink
+              to="/summoner-spells"
+              className="navbar__link"
+              onClick={closeMenu}
+            >
+              {t.navbar?.summonerSpells ?? "Summoner Spells"}
+            </NavLink>
+
+            <span className="navbar__sep" aria-hidden="true">
+              |
+            </span>
+
+            <NavLink to="/runes" className="navbar__link" onClick={closeMenu}>
+              {t.navbar?.runes ?? "Runes"}
+            </NavLink>
+
+            <span className="navbar__sep" aria-hidden="true">
+              |
+            </span>
+
+            <NavLink to="/regions" className="navbar__link" onClick={closeMenu}>
+              {t.navbar?.regions ?? "Regions"}
             </NavLink>
           </div>
 
-          {/* RIGHT: Menu button (unificado para mobile + dropdown en desktop) */}
+          {/* RIGHT: Unified menu */}
           <div className="navbar__right" ref={menuRef}>
             <button
               className={`navbar__menu-trigger ${menuOpen ? "is-open" : ""}`}
@@ -163,7 +168,7 @@ export function Navbar({ lang, setLang }) {
 
             {menuOpen && (
               <div className="navbar__menu" role="menu" aria-label="Site menu">
-                {/* Mobile-only: primary nav links (shown via CSS) */}
+                {/* Mobile-only primary links */}
                 <div className="navbar__menu-section navbar__menu-section--primary">
                   <NavLink
                     to="/"
@@ -184,12 +189,30 @@ export function Navbar({ lang, setLang }) {
                   </NavLink>
 
                   <NavLink
-                    to="/swagger"
+                    to="/summoner-spells"
                     className="navbar__menu-link"
                     role="menuitem"
                     onClick={closeMenu}
                   >
-                    {t.navbar?.swagger ?? "Documentation"}
+                    {t.navbar?.summonerSpells ?? "Summoner Spells"}
+                  </NavLink>
+
+                  <NavLink
+                    to="/runes"
+                    className="navbar__menu-link"
+                    role="menuitem"
+                    onClick={closeMenu}
+                  >
+                    {t.navbar?.runes ?? "Runes"}
+                  </NavLink>
+
+                  <NavLink
+                    to="/regions"
+                    className="navbar__menu-link"
+                    role="menuitem"
+                    onClick={closeMenu}
+                  >
+                    {t.navbar?.regions ?? "Regions"}
                   </NavLink>
                 </div>
 
@@ -229,24 +252,6 @@ export function Navbar({ lang, setLang }) {
                       {t.navbar?.profile ?? "Profile"}
                     </Link>
 
-                    <Link
-                      to="/create-champion"
-                      className="navbar__menu-link"
-                      role="menuitem"
-                      onClick={closeMenu}
-                    >
-                      {t.navbar?.createChampion ?? "Create Champion"}
-                    </Link>
-
-                    <Link
-                      to="/favorites"
-                      className="navbar__menu-link"
-                      role="menuitem"
-                      onClick={closeMenu}
-                    >
-                      {t.navbar?.favorites ?? "Favorites"}
-                    </Link>
-
                     <button
                       type="button"
                       className="navbar__menu-btn"
@@ -260,7 +265,16 @@ export function Navbar({ lang, setLang }) {
 
                 <div className="navbar__menu-divider" aria-hidden="true" />
 
-                {/* Contact */}
+                {/* Extra links */}
+                <Link
+                  to="/documentation"
+                  className="navbar__menu-link"
+                  role="menuitem"
+                  onClick={closeMenu}
+                >
+                  {t.navbar?.documentation ?? "Documentation"}
+                </Link>
+
                 <Link
                   to="/contact"
                   className="navbar__menu-link"
@@ -275,7 +289,6 @@ export function Navbar({ lang, setLang }) {
         </nav>
       </header>
 
-      {/* Spacer para que el contenido no quede debajo del header fijo */}
       <div className="navbar__spacer" aria-hidden="true" />
     </>
   );

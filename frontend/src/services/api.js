@@ -1,4 +1,4 @@
-// Configuración y funciones HTTP de la API REST de LoL.
+// Configuración y funciones HTTP de la API REST de LoL API V2.
 // Incluye manejo de token y endpoints principales para el frontend.
 
 import axios from "axios";
@@ -16,7 +16,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// --- ENDPOINTS DE AUTENTICACIÓN Y UTILIDADES ---
+// --- AUTH ---
 
 export async function login({ email, password }) {
   const { data } = await api.post("/auth/login", { email, password });
@@ -48,7 +48,7 @@ export function sendContact({ subject, message }) {
   return api.post("/contact", { subject, message });
 }
 
-// --- ENDPOINTS DE CAMPEONES ---
+// --- CHAMPIONS ---
 
 export async function getChampions({
   page = 1,
@@ -74,24 +74,20 @@ export async function getChampionById(id) {
   return data;
 }
 
-// --- ENDPOINTS DE ITEMS SHOP ---
+// --- ITEMS ---
 
 export async function getItems({
   lang = "en",
   page = 1,
   limit = 20,
-
   search,
   tags,
   roles,
-
   group,
   tier,
   section,
-
   minGold,
   maxGold,
-
   sort,
   includeHidden,
   shopOnly,
@@ -159,5 +155,59 @@ export async function getItemById(id, { lang = "en" } = {}) {
   const params = { lang };
 
   const { data } = await api.get(`/items/${id}`, { params });
+  return data;
+}
+
+// --- SUMMONER SPELLS ---
+
+export async function getSummonerSpells({ lang = "en" } = {}) {
+  const { data } = await api.get("/summoner-spells", {
+    params: { lang },
+  });
+
+  return data;
+}
+
+export async function getSummonerSpellById(id, { lang = "en" } = {}) {
+  const { data } = await api.get(`/summoner-spells/${id}`, {
+    params: { lang },
+  });
+
+  return data;
+}
+
+// --- RUNES ---
+
+export async function getRunes({ lang = "en" } = {}) {
+  const { data } = await api.get("/runes", {
+    params: { lang },
+  });
+
+  return data;
+}
+
+export async function getRuneById(id, { lang = "en" } = {}) {
+  const { data } = await api.get(`/runes/${id}`, {
+    params: { lang },
+  });
+
+  return data;
+}
+
+// --- REGIONS ---
+
+export async function getRegions({ lang = "en" } = {}) {
+  const { data } = await api.get("/regions", {
+    params: { lang },
+  });
+
+  return data;
+}
+
+export async function getRegionById(id, { lang = "en" } = {}) {
+  const { data } = await api.get(`/regions/${id}`, {
+    params: { lang },
+  });
+
   return data;
 }
