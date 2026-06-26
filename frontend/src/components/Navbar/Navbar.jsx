@@ -38,6 +38,19 @@ export function Navbar() {
 
   const closeMenu = () => setMenuOpen(false);
 
+  const scrollToPageTop = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      });
+    });
+  };
+
+  const handleNavigateTop = () => {
+    closeMenu();
+    scrollToPageTop();
+  };
+
   const showToast = (message) => {
     setToastMessage(message);
 
@@ -56,6 +69,7 @@ export function Navbar() {
 
     if (location.pathname === "/profile") {
       navigate("/");
+      scrollToPageTop();
     }
 
     showToast(t.logoutSuccess);
@@ -120,7 +134,7 @@ export function Navbar() {
         to={link.to}
         className={className}
         role={role}
-        onClick={closeMenu}
+        onClick={handleNavigateTop}
       >
         {t[link.key]}
       </NavLink>
@@ -152,7 +166,7 @@ export function Navbar() {
                 <NavLink
                   to={link.to}
                   className="navbar__link"
-                  onClick={closeMenu}
+                  onClick={handleNavigateTop}
                 >
                   {t[link.key]}
                 </NavLink>
@@ -171,7 +185,7 @@ export function Navbar() {
               to="/"
               end
               className="navbar__homeLink"
-              onClick={closeMenu}
+              onClick={handleNavigateTop}
               aria-label={t.home}
               title={t.home}
             >
@@ -217,7 +231,7 @@ export function Navbar() {
                     to="/login"
                     className="navbar__menu-link"
                     role="menuitem"
-                    onClick={closeMenu}
+                    onClick={handleNavigateTop}
                   >
                     {t.login}
                   </Link>
@@ -227,7 +241,7 @@ export function Navbar() {
                       to="/profile"
                       className="navbar__menu-link"
                       role="menuitem"
-                      onClick={closeMenu}
+                      onClick={handleNavigateTop}
                     >
                       {t.profile}
                     </Link>
@@ -249,7 +263,7 @@ export function Navbar() {
                   to="/documentation"
                   className="navbar__menu-link"
                   role="menuitem"
-                  onClick={closeMenu}
+                  onClick={handleNavigateTop}
                 >
                   {t.documentation}
                 </Link>
@@ -258,7 +272,7 @@ export function Navbar() {
                   to="/contact"
                   className="navbar__menu-link"
                   role="menuitem"
-                  onClick={closeMenu}
+                  onClick={handleNavigateTop}
                 >
                   {t.help}
                 </Link>

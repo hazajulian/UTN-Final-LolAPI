@@ -24,7 +24,15 @@ import Regiones1 from "../../assets/home/Regiones-1.png";
 
 import "./Home.css";
 
-const HERO_IMAGES = [Runaterra2, Runaterra8, Runaterra6, Runaterra11, Runaterra4, Runaterra10, Runaterra7];
+const HERO_IMAGES = [
+  Runaterra2,
+  Runaterra8,
+  Runaterra6,
+  Runaterra11,
+  Runaterra4,
+  Runaterra10,
+  Runaterra7,
+];
 
 const EXPLORE_LINKS = [
   { to: "/champions", key: "champions", image: Campeones2 },
@@ -53,6 +61,18 @@ export default function Home() {
 
     return () => clearInterval(timer);
   }, []);
+
+  const navigateToTop = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "smooth",
+        });
+      });
+    });
+  };
 
   return (
     <main className="home">
@@ -85,7 +105,11 @@ export default function Home() {
               {text.exploreAction}
             </a>
 
-            <Link className="home__secondaryBtn" to="/champions">
+            <Link
+              className="home__secondaryBtn"
+              to="/champions"
+              onClick={navigateToTop}
+            >
               {text.championsAction}
             </Link>
           </div>
@@ -124,7 +148,12 @@ export default function Home() {
 
         <div className="home__grid">
           {EXPLORE_LINKS.map((item) => (
-            <Link className="home__card" to={item.to} key={item.key}>
+            <Link
+              className="home__card"
+              to={item.to}
+              key={item.key}
+              onClick={navigateToTop}
+            >
               <img
                 className="home__cardImage"
                 src={item.image}
@@ -151,7 +180,12 @@ export default function Home() {
 
           <div className="home__utilityGrid">
             {UTILITY_LINKS.map((item) => (
-              <Link className="home__utilityCard" to={item.to} key={item.key}>
+              <Link
+                className="home__utilityCard"
+                to={item.to}
+                key={item.key}
+                onClick={navigateToTop}
+              >
                 <span className="home__utilityIcon" aria-hidden="true">
                   {item.icon}
                 </span>
