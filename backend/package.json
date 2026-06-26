@@ -1,0 +1,38 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "config/index.js",
+  "scripts": {
+    "dev": "node --watch config/index.js",
+    "dev:mongo": "node --watch startpoint/mongo.js",
+    "seed:champions": "node scripts/ddragon/syncSeedDdragon.js",
+    "seed:items": "node scripts/ddragon/syncItems.js",
+    "debug:items": "node scripts/ddragon/debugItems.js",
+    "seed:summoners": "node scripts/ddragon/syncSummonerSpells.js",
+    "seed:runes": "node scripts/ddragon/syncRunes.js",
+    "sync:regions": "node scripts/ddragon/syncRegions.js",
+    "seed:all": "npm run seed:champions && npm run seed:items && npm run seed:summoners && npm run seed:runes && npm run sync:regions"
+  },
+  "keywords": [
+    "league-of-legends",
+    "express",
+    "mongodb",
+    "react"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Backend for LoL API V2 fan wiki project.",
+  "dependencies": {
+    "axios": "^1.10.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "mongoose": "^8.16.3",
+    "nodemailer": "^9.0.1",
+    "swagger-ui-react": "^5.27.0",
+    "zod": "^4.0.5"
+  }
+}

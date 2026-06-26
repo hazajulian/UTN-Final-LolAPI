@@ -1,0 +1,229 @@
+// api.js
+// Centraliza todas las llamadas HTTP al backend de LoL Hub.
+
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3010";
+
+export const api = axios.create({
+  baseURL: `${API_URL}/api/v1`,
+});
+
+// Agrega automáticamente el token JWT a las peticiones autenticadas.
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// Auth
+
+export async function login({ email, password }) {
+  const { data } = await api.post("/auth/login", { email, password });
+  return data;
+}
+
+export async function register({
+  username,
+  email,
+  password,
+  confirmPassword,
+}) {
+  const { data } = await api.post("/auth/register", {
+    username,
+    email,
+    password,
+    confirmPassword,
+  });
+
+  return data;
+}
+
+export function forgotPassword({ email }) {
+  return api.post("/auth/forgot-password", { email });
+}
+
+export function resetPassword({ token, newPassword, confirmPassword }) {
+  return api.post("/auth/reset-password", {
+    token,
+    newPassword,
+    confirmPassword,
+  });
+}
+
+export function sendContact({ subject, message }) {
+  return api.post("/contact", { subject, message });
+}
+
+// Champions
+
+export async function getChampions({
+  page = 1,
+  limit = 50,
+  search,
+  name,
+  region,
+  role,
+} = {}) {
+  const params = { page, limit };
+
+  if (search) params.search = search;
+  if (name) params.name = name;
+  if (region) params.region = region;
+  if (role) params.role = role;
+
+  const { data } = await api.get("/champions", { params });
+
+  return data;
+}
+
+export async function getChampionById(id) {
+  const { data } = await api.get(`/champions/${id}`);
+  return data;
+}
+
+// Items
+
+export async function getItems({
+  lang = "en",
+  page = 1,
+  limit = 20,
+  search,
+  tags,
+  roles,
+  group,
+  tier,
+  section,
+  minGold,
+  maxGold,
+  sort,
+  includeHidden,
+  shopOnly,
+  dedupe,
+} = {}) {
+  const params = { lang, page, limit };
+
+  if (search) params.search = search;
+  if (tags) params.tags = tags;
+  if (roles) params.roles = roles;
+
+  if (group) params.group = group;
+  if (tier) params.tier = tier;
+  if (section) params.section = section;
+
+  if (minGold != null) params.minGold = minGold;
+  if (maxGold != null) params.maxGold = maxGold;
+
+  if (sort) params.sort = sort;
+  if (includeHidden != null) params.includeHidden = includeHidden;
+  if (shopOnly != null) params.shopOnly = shopOnly;
+  if (dedupe != null) params.dedupe = dedupe;
+
+  const { data } = await api.get("/items", { params });
+
+  return data;
+}
+
+export async function getItemsAll({
+  lang = "en",
+  group,
+  section,
+  includeHidden,
+  shopOnly,
+  dedupe,
+} = {}) {
+  const params = { lang };
+
+  if (group) params.group = group;
+  if (section) params.section = section;
+  if (includeHidden != null) params.includeHidden = includeHidden;
+  if (shopOnly != null) params.shopOnly = shopOnly;
+  if (dedupe != null) params.dedupe = dedupe;
+
+  const { data } = await api.get("/items/all", { params });
+
+  return data;
+}
+
+export async function getItemsFiltersMeta({
+  lang = "en",
+  group,
+  includeHidden,
+  shopOnly,
+} = {}) {
+  const params = { lang };
+
+  if (group) params.group = group;
+  if (includeHidden != null) params.includeHidden = includeHidden;
+  if (shopOnly != null) params.shopOnly = shopOnly;
+
+  const { data } = await api.get("/items/meta/filters", { params });
+
+  return data;
+}
+
+export async function getItemById(id, { lang = "en" } = {}) {
+  const params = { lang };
+
+  const { data } = await api.get(`/items/${id}`, { params });
+
+  return data;
+}
+
+// Summoner Spells
+
+export async function getSummonerSpells({ lang = "en" } = {}) {
+  const { data } = await api.get("/summoner-spells", {
+    params: { lang },
+  });
+
+  return data;
+}
+
+export async function getSummonerSpellById(id, { lang = "en" } = {}) {
+  const { data } = await api.get(`/summoner-spells/${id}`, {
+    params: { lang },
+  });
+
+  return data;
+}
+
+// Runes
+
+export async function getRunes({ lang = "en" } = {}) {
+  const { data } = await api.get("/runes", {
+    params: { lang },
+  });
+
+  return data;
+}
+
+export async function getRuneById(id, { lang = "en" } = {}) {
+  const { data } = await api.get(`/runes/${id}`, {
+    params: { lang },
+  });
+
+  return data;
+}
+
+// Regions
+
+export async function getRegions({ lang = "en" } = {}) {
+  const { data } = await api.get("/regions", {
+    params: { lang },
+  });
+
+  return data;
+}
+
+export async function getRegionById(id, { lang = "en" } = {}) {
+  const { data } = await api.get(`/regions/${id}`, {
+    params: { lang },
+  });
+
+  return data;
+}

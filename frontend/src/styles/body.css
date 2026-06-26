@@ -1,0 +1,211 @@
+/* body */
+
+body {
+  margin: 0;
+  overflow-y: scroll;
+}
+
+/* root */
+
+#root {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+/* fondo global */
+
+body.global-body-style {
+  position: relative;
+
+  background-color: var(--body-bg);
+
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.9), transparent 52%),
+    radial-gradient(
+      circle at 50% 44%,
+      rgba(244, 238, 221, 0.98),
+      rgba(235, 228, 209, 0.94) 56%,
+      rgba(224, 216, 195, 0.92) 100%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58) 0%, rgba(0, 0, 0, 0.035) 100%);
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+
+  transition:
+    background-color var(--transition-theme),
+    filter var(--transition-theme);
+}
+
+body.global-body-style::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(248, 244, 234, 0.72) 0%,
+      rgba(232, 225, 205, 0.8) 52%,
+      rgba(18, 18, 16, 0.2) 100%
+    ),
+    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.52), transparent 42%),
+    url("../assets/auth-bg.png");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+
+  opacity: 0.32;
+  pointer-events: none;
+
+  filter: none;
+  transition: opacity var(--transition-theme);
+}
+
+body.global-body-style::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 0.065) 58%,
+      rgba(0, 0, 0, 0.18) 100%
+    ),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.025) 0%, rgba(0, 0, 0, 0.08) 100%);
+
+  pointer-events: none;
+  mix-blend-mode: normal;
+
+  transition:
+    background var(--transition-theme),
+    opacity var(--transition-theme);
+}
+
+/* auth */
+
+body.no-global-body-style,
+body.auth-page {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-color: #17191d;
+
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.22), transparent 38%),
+    linear-gradient(
+      180deg,
+      rgba(8, 10, 12, 0.38) 0%,
+      rgba(8, 10, 12, 0.58) 52%,
+      rgba(8, 10, 12, 0.78) 100%
+    ),
+    url("../assets/auth-bg.png");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+
+  font-family: var(--font-title);
+  color: var(--color-gold-450);
+
+  overflow: hidden;
+}
+
+/* mobile performance */
+
+@media (max-width: 720px) {
+  html,
+  body {
+    min-height: 100%;
+    background: #d8c7a5;
+  }
+
+  body.global-body-style {
+    min-height: 100dvh;
+
+    background-color: #d8c7a5;
+
+    background-image: linear-gradient(
+      180deg,
+      #e2d5b8 0%,
+      #dfd0af 18%,
+      #dac8a6 48%,
+      #d4c19d 100%
+    );
+
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-position: center top;
+    background-attachment: scroll;
+
+    transition: none;
+  }
+
+  body.global-body-style::before,
+  body.global-body-style::after {
+    display: none;
+    content: none;
+  }
+
+  body.no-global-body-style,
+  body.auth-page {
+    min-height: 100dvh;
+
+    background-color: #17191d;
+
+    background-image:
+      radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.2), transparent 34%),
+      linear-gradient(
+        180deg,
+        rgba(10, 12, 15, 0.54) 0%,
+        rgba(10, 12, 15, 0.72) 52%,
+        rgba(10, 12, 15, 0.86) 100%
+      ),
+      url("../assets/auth-bg.png");
+
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
+
+    transition: none;
+  }
+
+  * {
+    scroll-behavior: auto !important;
+  }
+
+  .rd-modal,
+  .rd-modal *,
+  .champion-detail *,
+  .home *,
+  .items-page *,
+  .items-shop *,
+  .items-modal *,
+  .auth-page * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .home,
+  .items-page,
+  .items-shop,
+  .champion-detail,
+  .auth-page {
+    transform: none !important;
+    animation: none !important;
+  }
+}
